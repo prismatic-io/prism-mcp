@@ -1,0 +1,28 @@
+{
+  "name": "prism-mcp",
+  "version": "1.0.0",
+  "description": "MCP server that wraps Prismatic's Prism CLI tool",
+  "main": "dist/index.js",
+  "type": "module",
+  "scripts": {
+    "build": "tsc && chmod 755 dist/index.js",
+    "dev": "tsx src/index.ts",
+    "start": "node dist/index.js"
+  },
+  "keywords": [
+    "mcp",
+    "prismatic",
+    "prism",
+    "cli"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.12.1",
+    "@prismatic-io/prism": "^7.5.4",
+    "@types/node": "^22.15.30",
+    "tsx": "^4.19.4",
+    "typescript": "^5.8.3",
+    "zod": "^3.25.0"
+  }
+}
