@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { formatToolResult, lookupFlowUrl, buildCommand } from "./helpers.js";
-import { PrismCLIManager } from "./prism-cli-manager.js";
+import { execAsync, PrismCLIManager } from "./prism-cli-manager.js";
 import { z } from "zod";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 
@@ -239,6 +239,85 @@ server.tool(
       return formatToolResult(stdout);
     } catch (error) {
       throw new Error(`Failed to test flow: ${(error as Error).message}`);
+    }
+  }
+);
+
+server.tool(
+  "prism_components_publish",
+  "Publish a component from a specific directory",
+  {
+    directory: z.string(),
+    comment: z.string().optional(),
+    pullRequestUrl: z.string().optional(),
+    repoUrl: z.string().optional(),
+    noCheckSignature: z.boolean().optional(),
+    customer: z.string().optional(),
+    commitHash: z.string().optional(),
+    commitUrl: z.string().optional(),
+    skipOnSignatureMatch: z.boolean().optional(),
+  },
+  async ({ directory, comment, pullRequestUrl, repoUrl, noCheckSignature, customer, commitHash, commitUrl, skipOnSignatureMatch }) => {
+    try {
+      const manager = PrismCLIManager.getInstance();
+      
+      // First, run npm build in the component directory
+      await execAsync("npm run build", { cwd: directory });
+      
+      const command = buildCommand("components:publish", {
+        comment,
+        pullRequestUrl,
+        repoUrl,
+        "no-confirm": true,
+        "no-check-signature": noCheckSignature,
+        customer,
+        commitHash,
+        commitUrl,
+        "skip-on-signature-match": skipOnSignatureMatch,
+      });
+      
+      // Execute publish command in the specified directory
+      const { stdout } = await manager.executeCommand(command, directory);
+      return formatToolResult(stdout);
+    } catch (error) {
+      throw new Error(`Failed to publish component: ${(error as Error).message}`);
+    }
+  }
+);
+
+server.tool(
+  "prism_integrations_import",
+  "Import an integration from a specific directory",
+  {
+    directory: z.string(),
+    integrationId: z.string().optional(),
+    path: z.string().optional().describe("Path to the YAML definition of an integration to import. Not applicable to CNI"),
+    replace: z.boolean().optional().describe("Allows replacing an existing integration regardless of code-native status. Requires integrationId."),
+    iconPath: z.string().optional().describe("Path to the PNG icon for the integration. Not applicable for CNI."),
+  },
+  async ({ directory, integrationId, path, replace, iconPath }) => {
+    try {
+      if (replace && !integrationId) {
+        throw new Error("If replace is true, an integrationId is required.");
+      }
+
+      const manager = PrismCLIManager.getInstance();
+      
+      // First, run npm build in the integration directory
+      await execAsync("npm run build", { cwd: directory });
+      
+      const command = buildCommand("integrations:import", {
+        integrationId,
+        path,
+        replace,
+        "icon-path": iconPath,
+      });
+      
+      // Execute import command in the specified directory
+      const { stdout } = await manager.executeCommand(command, directory);
+      return formatToolResult(stdout);
+    } catch (error) {
+      throw new Error(`Failed to import integration: ${(error as Error).message}`);
     }
   }
 );

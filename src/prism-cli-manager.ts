@@ -7,7 +7,7 @@ import { fileURLToPath } from "node:url";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const execAsync = promisify(exec);
+export const execAsync = promisify(exec);
 
 export const DEFAULT_PRISMATIC_URL = "https://app.prismatic.io/";
 
@@ -69,11 +69,13 @@ export class PrismCLIManager {
   /**
    * Executes a Prismatic CLI command.
    * @param {string} command - The command to execute
+   * @param {string} [customCwd] - Optional custom working directory
    * @returns {Promise<{stdout: string, stderr: string}>} A promise that resolves to an object containing stdout and stderr
    * @throws {Error} If CLI is not installed or command execution fails
    */
   public async executeCommand(
     command: string,
+    customCwd?: string
   ): Promise<{ stdout: string; stderr: string }> {
     const isInstalled = await this.checkCLIInstallation();
 
@@ -85,7 +87,7 @@ export class PrismCLIManager {
 
     try {
       const execOptions: any = {
-        cwd: this.workingDirectory,
+        cwd: customCwd || this.workingDirectory,
         env: {
           ...process.env,
           PRISMATIC_URL: this.prismaticUrl,
