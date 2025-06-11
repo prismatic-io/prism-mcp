@@ -9,10 +9,6 @@ export const LoginArgsSchema = z.object({
   password: z.string(),
 });
 
-export const SetUrlArgsSchema = z.object({
-  url: z.url().describe("Prismatic URL to use for CLI operations"),
-});
-
 // Integration schemas
 export const IntegrationInitArgsSchema = z.object({
   name: z.string().min(1).regex(/^[a-zA-Z0-9_-]+$/, "Name must be alphanumeric with hyphens and underscores only").describe("Name of the integration (alphanumeric, hyphens, underscores)"),
@@ -56,7 +52,6 @@ export const FlowTestArgsSchema = z.object({
 // Type exports
 export type EmptyArgs = z.infer<typeof EmptyArgsSchema>;
 export type LoginArgs = z.infer<typeof LoginArgsSchema>;
-export type SetUrlArgs = z.infer<typeof SetUrlArgsSchema>;
 export type IntegrationInitArgs = z.infer<typeof IntegrationInitArgsSchema>;
 export type IntegrationConvertArgs = z.infer<typeof IntegrationConvertArgsSchema>;
 export type ComponentInitArgs = z.infer<typeof ComponentInitArgsSchema>;

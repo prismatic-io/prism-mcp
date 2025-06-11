@@ -25,7 +25,10 @@ export async function lookupFlowUrl(
   }
 
   const manager = PrismCLIManager.getInstance();
-  const listCommand = `integrations:flows:list "${integrationId}" --extended --output json`;
+  const listCommand = buildCommand(`integrations:flows:list "${integrationId}"`, {
+    extended: true,
+    output: "json",
+  });
   const { stdout: flowsJson } = await manager.executeCommand(listCommand);
   const flows = JSON.parse(flowsJson);
 

@@ -215,7 +215,7 @@ const prismTools: PrismTool[] = [
     name: "prism_integrations_flows_test",
     description: "Test a flow in an integration",
     inputSchema: z.toJSONSchema(FlowTestArgsSchema),
-    validate: (args: any) => FlowTestArgsSchema.parse(args),
+    validate: (args) => FlowTestArgsSchema.parse(args),
     handler: async (args: FlowTestArgs) => {
       try {
         let flowUrl = args.flowUrl;
@@ -234,7 +234,8 @@ const prismTools: PrismTool[] = [
         
         // Build the test command
         const manager = PrismCLIManager.getInstance();
-        const command = buildCommand(`integrations:flows:test --flow-url "${flowUrl}" --jsonl --succinct`, {
+        const command = buildCommand(`integrations:flows:test`, {
+          "flow-url": flowUrl,
           payload: args.payload,
           "payload-content-type": args.payloadContentType,
           sync: args.sync,
@@ -242,6 +243,8 @@ const prismTools: PrismTool[] = [
           "tail-results": args.tailResults,
           timeout: args.timeout,
           "result-file": args.resultFile,
+          "jsonl": true,
+          "succinct": true,
         });
         
         const { stdout } = await manager.executeCommand(command);
