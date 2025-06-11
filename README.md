@@ -6,8 +6,6 @@
 
 This MCP server provides the following tools:
 
-- **prism_login**: Authenticate with Prismatic using email and password
-- **prism_logout**: Log out of Prismatic
 - **prism_me**: Check login status and display current user profile information
 - **prism_integrations_list**: List all integrations with filtering options
 - **prism_integrations_init**: Initialize a new Code Native Integration

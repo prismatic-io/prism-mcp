@@ -26,41 +26,6 @@ server.tool(
 );
 
 server.tool(
-  "prism_login",
-  "Authenticate with Prismatic (requires email and password)",
-  { email: z.string(), password: z.string() },
-  async ({ email, password }) => {
-    try {
-      const manager = PrismCLIManager.getInstance();
-      // We need to explicitly include email & password for the MCP server version.
-      const command = buildCommand("login", {
-        email,
-        password,
-      });
-      const { stdout } = await manager.executeCommand(command);
-      return formatToolResult(stdout);
-    } catch (error) {
-      throw new Error(`Failed to login: ${(error as Error).message}`);
-    }
-  }
-);
-
-server.tool(
-  "prism_logout",
-  "Log out of Prismatic",
-  {},
-  async ({}) => {
-    try {
-      const manager = PrismCLIManager.getInstance();
-      const output = await manager.logout();
-      return formatToolResult(output || "Successfully logged out");
-    } catch (error) {
-      throw new Error(`Failed to logout: ${(error as Error).message}`);
-    }
-  }
-);
-
-server.tool(
   "prism_integrations_list",
   "List all integrations in your organization",
   {},
