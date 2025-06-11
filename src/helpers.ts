@@ -1,14 +1,26 @@
 import { PrismCLIManager } from "./prism-cli-manager.js";
+import { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
 
 /**
- * Parse JSON output with fallback to raw text
+ * Parse output and format as CallToolResult
  */
-export function parseJsonWithFallback(stdout: string, dataKey?: string) {
+export function formatToolResult(stdout: string, dataKey?: string): CallToolResult {
   try {
     const data = JSON.parse(stdout);
-    return dataKey ? { [dataKey]: data } : data;
+    const result = dataKey ? { [dataKey]: data } : data;
+    return {
+      content: [{
+        type: "text",
+        text: JSON.stringify(result, null, 2),
+      }],
+    };
   } catch {
-    return { output: stdout.trim() };
+    return {
+      content: [{
+        type: "text",
+        text: stdout.trim(),
+      }],
+    };
   }
 }
 

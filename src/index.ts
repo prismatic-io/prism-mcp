@@ -1,313 +1,298 @@
 #!/usr/bin/env node
-import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
-import {
-  CallToolRequestSchema,
-  ListToolsRequestSchema,
-} from "@modelcontextprotocol/sdk/types.js";
-import { parseJsonWithFallback, lookupFlowUrl, buildCommand } from "./helpers.js";
+import { formatToolResult, lookupFlowUrl, buildCommand } from "./helpers.js";
 import { PrismCLIManager } from "./prism-cli-manager.js";
-import { z } from "zod/v4";
-import {
-  EmptyArgsSchema,
-  LoginArgsSchema,
-  IntegrationInitArgsSchema,
-  IntegrationConvertArgsSchema,
-  ComponentInitArgsSchema,
-  FlowListArgsSchema,
-  FlowTestArgsSchema,
-  type EmptyArgs,
-  type LoginArgs,
-  type IntegrationInitArgs,
-  type IntegrationConvertArgs,
-  type ComponentInitArgs,
-  type FlowListArgs,
-  type FlowTestArgs,
-} from "./schemas.js";
+import { z } from "zod";
+import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 
-const server = new Server(
-  {
-    name: "prism-mcp",
-    version: "1.0.0",
-  },
-  {
-    capabilities: {
-      tools: {},
-    },
+const server = new McpServer({
+  name: "prism-mcp",
+  version: "1.0.0",
+});
+
+server.tool(
+  "prism_me",
+  "Check login status and display current user profile information",
+  {},
+  async () => {
+    try {
+      const manager = PrismCLIManager.getInstance();
+      const output = await manager.me();
+      return formatToolResult(output);
+    } catch (error) {
+      throw new Error(`Failed to get user info: ${(error as Error).message}`);
+    }
   }
 );
 
-interface PrismTool<T = any> {
-  name: string;
-  description: string;
-  inputSchema: any;
-  handler: (args: T) => Promise<any>;
-  validate?: (args: any) => T;
-}
+server.tool(
+  "prism_login",
+  "Authenticate with Prismatic (requires email and password)",
+  { email: z.string(), password: z.string() },
+  async ({ email, password }) => {
+    try {
+      const manager = PrismCLIManager.getInstance();
+      // We need to explicitly include email & password for the MCP server version.
+      const command = buildCommand("login", {
+        email,
+        password,
+      });
+      const { stdout } = await manager.executeCommand(command);
+      return formatToolResult(stdout);
+    } catch (error) {
+      throw new Error(`Failed to login: ${(error as Error).message}`);
+    }
+  }
+);
 
-const prismTools: PrismTool[] = [
+server.tool(
+  "prism_logout",
+  "Log out of Prismatic",
+  {},
+  async ({}) => {
+    try {
+      const manager = PrismCLIManager.getInstance();
+      const output = await manager.logout();
+      return formatToolResult(output || "Successfully logged out");
+    } catch (error) {
+      throw new Error(`Failed to logout: ${(error as Error).message}`);
+    }
+  }
+);
+
+server.tool(
+  "prism_integrations_list",
+  "List all integrations in your organization",
+  {},
+  async ({}) => {
+    try {
+      const manager = PrismCLIManager.getInstance();
+      const command = buildCommand("integrations:list", {
+        output: "json",
+      });
+      const { stdout } = await manager.executeCommand(command);
+      return formatToolResult(stdout, "integrations");
+    } catch (error) {
+      throw new Error(
+        `Failed to list integrations: ${(error as Error).message}`
+      );
+    }
+  }
+);
+
+server.tool(
+  "prism_components_list",
+  "List all components available in your organization",
+  {},
+  async () => {
+    try {
+      const manager = PrismCLIManager.getInstance();
+      const command = buildCommand("components:list", {
+        output: "json",
+      });
+      const { stdout } = await manager.executeCommand(command);
+      return formatToolResult(stdout, "components");
+    } catch (error) {
+      throw new Error(`Failed to list components: ${(error as Error).message}`);
+    }
+  }
+);
+
+server.tool(
+  "prism_integrations_init",
+  "Initialize a new Code Native Integration",
   {
-    name: "prism_me",
-    description: "Check login status and display current user profile information",
-    inputSchema: z.toJSONSchema(EmptyArgsSchema),
-    validate: (args) => EmptyArgsSchema.parse(args),
-    handler: async (_args: EmptyArgs) => {
-      try {
-        const manager = PrismCLIManager.getInstance();
-        const output = await manager.me();
-        return { output };
-      } catch (error) {
-        throw new Error(`Failed to get user info: ${(error as Error).message}`);
-      }
-    },
+    name: z
+      .string()
+      .min(1)
+      .regex(
+        /^[a-zA-Z0-9_-]+$/,
+        "Name must be alphanumeric with hyphens and underscores only"
+      ),
+    directory: z.string().optional(),
   },
+  async ({ name, directory }) => {
+    try {
+      const manager = PrismCLIManager.getInstance();
+      const command = buildCommand(`integrations:init ${name}`, {
+        directory: directory,
+      });
+      const { stdout } = await manager.executeCommand(command);
+      return formatToolResult(stdout);
+    } catch (error) {
+      throw new Error(
+        `Failed to initialize integration: ${(error as Error).message}`
+      );
+    }
+  }
+);
+
+server.tool(
+  "prism_components_init",
+  "Initialize a new Component",
   {
-    name: "prism_login",
-    description: "Authenticate with Prismatic (requires email and password)",
-    inputSchema: z.toJSONSchema(LoginArgsSchema),
-    validate: (args) => LoginArgsSchema.parse(args),
-    handler: async (args: LoginArgs) => {
-      try {
-        const manager = PrismCLIManager.getInstance();
-        // We need to explicitly include email & password for the MCP server version.
-        const command = buildCommand("login", {
-          email: args.email,
-          password: args.password,
-        });
-        const { stdout } = await manager.executeCommand(command);
-        return { output: stdout.trim() };
-      } catch (error) {
-        throw new Error(`Failed to login: ${(error as Error).message}`);
-      }
-    },
+    name: z.string().min(1),
+    wsdlPath: z.string().optional(),
+    openApiPath: z.string().optional(),
   },
+  async ({ name, wsdlPath, openApiPath }) => {
+    try {
+      const manager = PrismCLIManager.getInstance();
+      const command = buildCommand(`components:init ${name}`, {
+        "wsdl-path": wsdlPath,
+        "open-api-path": openApiPath,
+      });
+      const { stdout } = await manager.executeCommand(command);
+      return formatToolResult(stdout);
+    } catch (error) {
+      throw new Error(
+        `Failed to initialize component: ${(error as Error).message}`
+      );
+    }
+  }
+);
+
+server.tool(
+  "prism_integrations_convert",
+  "Convert a Low-Code Integration's YAML file into a Code Native Integration",
   {
-    name: "prism_logout",
-    description: "Log out of Prismatic",
-    inputSchema: z.toJSONSchema(EmptyArgsSchema),
-    validate: (args) => EmptyArgsSchema.parse(args),
-    handler: async () => {
-      try {
-        const manager = PrismCLIManager.getInstance();
-        const output = await manager.logout();
-        return { output: output || "Successfully logged out" };
-      } catch (error) {
-        throw new Error(`Failed to logout: ${(error as Error).message}`);
-      }
-    },
+    yamlFile: z.string(),
+    folder: z.string().optional(),
+    registryPrefix: z.string().optional(),
   },
-  {
-    name: "prism_integrations_list",
-    description: "List all integrations in your organization",
-    inputSchema: z.toJSONSchema(EmptyArgsSchema),
-    validate: (args) => EmptyArgsSchema.parse(args),
-    handler: async () => {
-      try {
-        const manager = PrismCLIManager.getInstance();
-        const command = buildCommand("integrations:list", {
-          output: "json",
-        });
-        const { stdout } = await manager.executeCommand(command);
-        return parseJsonWithFallback(stdout, "integrations");
-      } catch (error) {
-        throw new Error(`Failed to list integrations: ${(error as Error).message}`);
-      }
-    },
-  },
-  {
-    name: "prism_components_list",
-    description: "List all components available in your organization",
-    inputSchema: z.toJSONSchema(EmptyArgsSchema),
-    validate: (args) => EmptyArgsSchema.parse(args),
-    handler: async (args: EmptyArgs) => {
-      try {
-        const manager = PrismCLIManager.getInstance();
-        const command = buildCommand("components:list", {
-          output: "json",
-        });
-        const { stdout } = await manager.executeCommand(command);
-        return parseJsonWithFallback(stdout, "components");
-      } catch (error) {
-        throw new Error(`Failed to list components: ${(error as Error).message}`);
-      }
-    },
-  },
-  {
-    name: "prism_integrations_init",
-    description: "Initialize a new Code Native Integration",
-    inputSchema: z.toJSONSchema(IntegrationInitArgsSchema),
-    validate: (args) => IntegrationInitArgsSchema.parse(args),
-    handler: async (args: IntegrationInitArgs) => {
-      try {
-        const manager = PrismCLIManager.getInstance();
-        const command = buildCommand(`integrations:init ${args.name}`, {
-          directory: args.directory,
-        });
-        const { stdout } = await manager.executeCommand(command);
-        return { output: stdout.toString().trim() };
-      } catch (error) {
-        throw new Error(`Failed to initialize integration: ${(error as Error).message}`);
-      }
-    },
-  },
-  {
-    name: "prism_components_init",
-    description: "Initialize a new Component",
-    inputSchema: z.toJSONSchema(ComponentInitArgsSchema),
-    validate: (args) => ComponentInitArgsSchema.parse(args),
-    handler: async (args: ComponentInitArgs) => {
-      try {
-        const manager = PrismCLIManager.getInstance();
-        const command = buildCommand(`components:init ${args.name}`, {
-          "wsdl-path": args.wsdlPath,
-          "open-api-path": args.openApiPath,
-        });
-        const { stdout } = await manager.executeCommand(command);
-        return { output: stdout.trim() };
-      } catch (error) {
-        throw new Error(`Failed to initialize component: ${(error as Error).message}`);
-      }
-    },
-  },
-  {
-    name: "prism_integrations_convert",
-    description: "Convert a Low-Code Integration's YAML file into a Code Native Integration",
-    inputSchema: z.toJSONSchema(IntegrationConvertArgsSchema),
-    validate: (args) => IntegrationConvertArgsSchema.parse(args),
-    handler: async (args: IntegrationConvertArgs) => {
-      try {
-        const manager = PrismCLIManager.getInstance();
-        const command = buildCommand("integrations:convert", {
-          yamlFile: args.yamlFile,
-          folder: args.folder,
-          registryPrefix: args.registryPrefix,
-        });
-        const { stdout } = await manager.executeCommand(command);
-        return { output: stdout.trim() };
-      } catch (error) {
-        throw new Error(`Failed to convert integration: ${(error as Error).message}`);
-      }
-    },
-  },
-  {
-    name: "prism_integrations_flows_list",
-    description: "List flows for an integration",
-    inputSchema: z.toJSONSchema(FlowListArgsSchema),
-    validate: (args: any) => FlowListArgsSchema.parse(args),
-    handler: async (args: FlowListArgs) => {
-      try {
-        const manager = PrismCLIManager.getInstance();
-        const command = buildCommand(`integrations:flows:list "${args.integrationId}"`, {
+  async ({ yamlFile, folder, registryPrefix }) => {
+    try {
+      const manager = PrismCLIManager.getInstance();
+      const command = buildCommand("integrations:convert", {
+        yamlFile: yamlFile,
+        folder: folder,
+        registryPrefix: registryPrefix,
+      });
+      const { stdout } = await manager.executeCommand(command);
+      return formatToolResult(stdout);
+    } catch (error) {
+      throw new Error(
+        `Failed to convert integration: ${(error as Error).message}`
+      );
+    }
+  }
+);
+
+server.tool(
+  "prism_integrations_flows_list",
+  "List flows for an integration",
+  { integrationId: z.string().min(1), columns: z.string().optional() },
+  async ({ integrationId, columns }) => {
+    try {
+      const manager = PrismCLIManager.getInstance();
+      const command = buildCommand(
+        `integrations:flows:list "${integrationId}"`,
+        {
           extended: true,
-          columns: args.columns,
+          columns,
           output: "json",
-        });
-        
-        const { stdout } = await manager.executeCommand(command);
-        
-        return parseJsonWithFallback(stdout, "flows");
-      } catch (error) {
-        throw new Error(`Failed to list flows: ${(error as Error).message}`);
-      }
-    },
-  },
+        }
+      );
+
+      const { stdout } = await manager.executeCommand(command);
+
+      return formatToolResult(stdout, "flows");
+    } catch (error) {
+      throw new Error(`Failed to list flows: ${(error as Error).message}`);
+    }
+  }
+);
+
+server.tool(
+  "prism_integrations_flows_test",
+  "Test a flow in an integration",
   {
-    name: "prism_integrations_flows_test",
-    description: "Test a flow in an integration",
-    inputSchema: z.toJSONSchema(FlowTestArgsSchema),
-    validate: (args) => FlowTestArgsSchema.parse(args),
-    handler: async (args: FlowTestArgs) => {
-      try {
-        let flowUrl = args.flowUrl;
-
-        if ((args.tailLogs || args.tailResults) && !args.timeout) {
-          throw new Error("If tailing logs or step results via MCP server, a timeout (in seconds) is required.")
-        }
-        
-        // If no direct URL provided, we need to look it up
-        if (!flowUrl) {
-          if (!args.integrationId) {
-            throw new Error("integrationId is required when flowUrl is not provided");
-          }
-          flowUrl = await lookupFlowUrl(args.integrationId, args.flowId, args.flowName);
-        }
-        
-        // Build the test command
-        const manager = PrismCLIManager.getInstance();
-        const command = buildCommand(`integrations:flows:test`, {
-          "flow-url": flowUrl,
-          payload: args.payload,
-          "payload-content-type": args.payloadContentType,
-          sync: args.sync,
-          "tail-logs": args.tailLogs,
-          "tail-results": args.tailResults,
-          timeout: args.timeout,
-          "result-file": args.resultFile,
-          "jsonl": true,
-          "succinct": true,
-        });
-        
-        const { stdout } = await manager.executeCommand(command);
-        return { output: stdout.trim() };
-      } catch (error) {
-        throw new Error(`Failed to test flow: ${(error as Error).message}`);
-      }
-    },
+    flowUrl: z.string().optional(),
+    flowId: z.string().optional(),
+    flowName: z.string().optional(),
+    integrationId: z.string().optional(),
+    payload: z.string().optional(),
+    payloadContentType: z.string().optional(),
+    sync: z.boolean().optional(),
+    tailLogs: z.boolean().optional(),
+    tailResults: z.boolean().optional(),
+    timeout: z.number().positive().optional().describe("In seconds"),
+    resultFile: z.string().optional(),
   },
-];
+  async ({
+    flowUrl,
+    flowId,
+    flowName,
+    integrationId,
+    payload,
+    payloadContentType,
+    sync,
+    tailLogs,
+    tailResults,
+    timeout,
+    resultFile,
+  }) => {
+    try {
+      let testUrl = flowUrl;
 
-server.setRequestHandler(ListToolsRequestSchema, async () => {
-  return {
-    tools: prismTools.map((tool) => ({
-      name: tool.name,
-      description: tool.description,
-      inputSchema: tool.inputSchema,
-    })),
-  };
-});
+      if ((tailLogs || tailResults) && !timeout) {
+        throw new Error(
+          "If tailing logs or step results via MCP server, a timeout (in seconds) is required."
+        );
+      }
 
-server.setRequestHandler(CallToolRequestSchema, async (request) => {
-  const { name, arguments: args } = request.params;
-  
-  const tool = prismTools.find((t) => t.name === name);
-  if (!tool) {
-    throw new Error(`Tool not found: ${name}`);
+      // If no direct URL provided, we need to look it up
+      if (!testUrl) {
+        if (!integrationId) {
+          throw new Error(
+            "integrationId is required when flowUrl is not provided"
+          );
+        }
+        testUrl = await lookupFlowUrl(
+          integrationId,
+          flowId,
+          flowName
+        );
+      }
+
+      // Build the test command
+      const manager = PrismCLIManager.getInstance();
+      const command = buildCommand(`integrations:flows:test`, {
+        "flow-url": flowUrl,
+        payload,
+        "payload-content-type": payloadContentType,
+        sync,
+        "tail-logs": tailLogs,
+        "tail-results": tailResults,
+        timeout,
+        "result-file": resultFile,
+        jsonl: true,
+        quiet: true,
+      });
+
+      const { stdout } = await manager.executeCommand(command);
+      return formatToolResult(stdout);
+    } catch (error) {
+      throw new Error(`Failed to test flow: ${(error as Error).message}`);
+    }
   }
-  
-  try {
-    // Validate args if needed
-    const validatedArgs = tool.validate ? tool.validate(args || {}) : (args || {});
-    const result = await tool.handler(validatedArgs);
-    return {
-      content: [
-        {
-          type: "text",
-          text: JSON.stringify(result, null, 2),
-        },
-      ],
-    };
-  } catch (error) {
-    return {
-      content: [
-        {
-          type: "text",
-          text: `Error: ${(error as Error).message}`,
-        },
-      ],
-      isError: true,
-    };
-  }
-});
+);
 
 async function main() {
   try {
     // Initialize the manager with working directory from environment
-    const manager = PrismCLIManager.getInstance(process.env.WORKING_DIRECTORY, process.env.PRISMATIC_URL);
+    const manager = PrismCLIManager.getInstance(
+      process.env.WORKING_DIRECTORY,
+      process.env.PRISMATIC_URL
+    );
     const transport = new StdioServerTransport();
     await server.connect(transport);
     console.error(`Prism MCP server running`);
   } catch (error) {
-    console.error("Error: Failed to start Prism MCP server:", error instanceof Error ? error.message : String(error));
+    console.error(
+      "Error: Failed to start Prism MCP server:",
+      error instanceof Error ? error.message : String(error)
+    );
     process.exit(1);
   }
 }
