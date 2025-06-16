@@ -18,6 +18,7 @@ This MCP server provides the following tools:
 - **prism_components_list**: List all available components with version options
 - **prism_components_init**: Initialize a new Component (supports WSDL/OpenAPI generation)
 - **prism_components_publish**: Publish a component from a specific directory
+- **prism_components_generate_manifest**: Generate the manifest for a Prismatic component
 
 ## Prerequisites
 

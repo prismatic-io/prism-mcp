@@ -4,6 +4,7 @@ import { formatToolResult, lookupFlowUrl, buildCommand } from "./helpers.js";
 import { execAsync, PrismCLIManager } from "./prism-cli-manager.js";
 import { z } from "zod";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import path from "node:path";
 
 const server = new McpServer({
   name: "prism-mcp",
@@ -12,7 +13,7 @@ const server = new McpServer({
 
 server.tool(
   "prism_me",
-  "Check login status and display current user profile information",
+  "Check Prismtic login status and display current user profile information",
   {},
   async () => {
     try {
@@ -65,7 +66,7 @@ server.tool(
 
 server.tool(
   "prism_integrations_init",
-  "Initialize a new Code Native Integration",
+  "Initialize a new Prismatic Code Native Integration (CNI)",
   {
     name: z
       .string()
@@ -94,7 +95,7 @@ server.tool(
 
 server.tool(
   "prism_components_init",
-  "Initialize a new Component",
+  "Initialize a new Prismatic custom component",
   {
     name: z.string().min(1),
     wsdlPath: z.string().optional(),
@@ -170,7 +171,7 @@ server.tool(
 
 server.tool(
   "prism_integrations_flows_test",
-  "Test a flow in an integration",
+  "Test a flow in a Prismatic integration",
   {
     flowUrl: z.string().optional(),
     flowId: z.string().optional(),
@@ -245,7 +246,7 @@ server.tool(
 
 server.tool(
   "prism_components_publish",
-  "Publish a component from a specific directory",
+  "Publish a custom Prismatic component from a specific directory",
   {
     directory: z.string(),
     comment: z.string().optional(),
@@ -287,7 +288,7 @@ server.tool(
 
 server.tool(
   "prism_integrations_import",
-  "Import an integration from a specific directory",
+  "Import a Prismatic code-native integration from a specific directory",
   {
     directory: z.string(),
     integrationId: z.string().optional(),
@@ -318,6 +319,40 @@ server.tool(
       return formatToolResult(stdout);
     } catch (error) {
       throw new Error(`Failed to import integration: ${(error as Error).message}`);
+    }
+  }
+);
+
+server.tool(
+  "prism_components_generate_manifest",
+  "Generate the type manifest for a Prismatic component to enable its usage within a Code-Native Integration",
+  {
+    componentDir: z.string(),
+    outputDir: z.string().optional(),
+    registry: z.string().optional(),
+    dryRun: z.boolean().optional(),
+    skipSignatureVerify: z.boolean().optional(),
+    version: z.string().optional(),
+    name: z.string().optional(),
+  },
+  async ({ componentDir, outputDir, registry, dryRun, skipSignatureVerify, version, name }) => {
+    try {
+      // Build the component before attempting to generate the manifest
+      await execAsync("npm run build", { cwd: componentDir });
+
+      const command = buildCommand("component-manifest", {
+        "output-dir": outputDir ? path.join(outputDir, `${path.basename(componentDir) || name}-manifest`): "",
+        registry,
+        "dry-run": dryRun,
+        "skip-signature-verify": skipSignatureVerify,
+        version,
+        name,
+      })
+
+      const { stdout } = await execAsync(command, { cwd: componentDir });
+      return formatToolResult(stdout);
+    } catch (error) {
+      throw new Error(`Failed to generate component manifest: ${(error as Error).message}`);
     }
   }
 );
