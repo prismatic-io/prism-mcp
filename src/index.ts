@@ -4,6 +4,7 @@ import { formatToolResult, lookupFlowUrl, buildCommand } from "./helpers.js";
 import { execAsync, PrismCLIManager } from "./prism-cli-manager.js";
 import { z } from "zod";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import path from "node:path";
 
 const server = new McpServer({
   name: "prism-mcp",
@@ -318,6 +319,40 @@ server.tool(
       return formatToolResult(stdout);
     } catch (error) {
       throw new Error(`Failed to import integration: ${(error as Error).message}`);
+    }
+  }
+);
+
+server.tool(
+  "prism_components_generate_manifest",
+  "Generate the manifest for a Prismatic component",
+  {
+    componentDir: z.string(),
+    outputDir: z.string().optional(),
+    registry: z.string().optional(),
+    dryRun: z.boolean().optional(),
+    skipSignatureVerify: z.boolean().optional(),
+    version: z.string().optional(),
+    name: z.string().optional(),
+  },
+  async ({ componentDir, outputDir, registry, dryRun, skipSignatureVerify, version, name }) => {
+    try {
+      // Build the component before attempting to generate the manifest
+      await execAsync("npm run build", { cwd: componentDir });
+
+      const command = buildCommand("component-manifest", {
+        "output-dir": outputDir ? path.join(outputDir, `${path.basename(componentDir) || name}-manifest`): "",
+        registry,
+        "dry-run": dryRun,
+        "skip-signature-verify": skipSignatureVerify,
+        version,
+        name,
+      })
+
+      const { stdout } = await execAsync(command, { cwd: componentDir });
+      return formatToolResult(stdout);
+    } catch (error) {
+      throw new Error(`Failed to generate component manifest: ${(error as Error).message}`);
     }
   }
 );
