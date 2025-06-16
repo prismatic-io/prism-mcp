@@ -13,7 +13,7 @@ const server = new McpServer({
 
 server.tool(
   "prism_me",
-  "Check login status and display current user profile information",
+  "Check Prismtic login status and display current user profile information",
   {},
   async () => {
     try {
@@ -66,7 +66,7 @@ server.tool(
 
 server.tool(
   "prism_integrations_init",
-  "Initialize a new Code Native Integration",
+  "Initialize a new Prismatic Code Native Integration (CNI)",
   {
     name: z
       .string()
@@ -95,7 +95,7 @@ server.tool(
 
 server.tool(
   "prism_components_init",
-  "Initialize a new Component",
+  "Initialize a new Prismatic custom component",
   {
     name: z.string().min(1),
     wsdlPath: z.string().optional(),
@@ -171,7 +171,7 @@ server.tool(
 
 server.tool(
   "prism_integrations_flows_test",
-  "Test a flow in an integration",
+  "Test a flow in a Prismatic integration",
   {
     flowUrl: z.string().optional(),
     flowId: z.string().optional(),
@@ -246,7 +246,7 @@ server.tool(
 
 server.tool(
   "prism_components_publish",
-  "Publish a component from a specific directory",
+  "Publish a custom Prismatic component from a specific directory",
   {
     directory: z.string(),
     comment: z.string().optional(),
@@ -288,7 +288,7 @@ server.tool(
 
 server.tool(
   "prism_integrations_import",
-  "Import an integration from a specific directory",
+  "Import a Prismatic code-native integration from a specific directory",
   {
     directory: z.string(),
     integrationId: z.string().optional(),
@@ -325,7 +325,7 @@ server.tool(
 
 server.tool(
   "prism_components_generate_manifest",
-  "Generate the manifest for a Prismatic component",
+  "Generate the type manifest for a Prismatic component to enable its usage within a Code-Native Integration",
   {
     componentDir: z.string(),
     outputDir: z.string().optional(),
