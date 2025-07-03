@@ -2,7 +2,9 @@
 
 `prism-mcp` is a local MCP (Model Context Protocol) server that wraps Prismatic's Prism CLI tool, allowing AI assistants to interact with Prismatic dev tooling directly.
 
-**NOTE: This tool is highly experimental!**
+In the future, we may extend this MCP server to include other actions that may be helpful to Prismatic Code-Native devs, even if they're not currently available in [prism](https://github.com/prismatic-io/prism). So despite the name, imagine that this is really a "Prismatic Dev Ex Server" rather than just a `prism` wrapper specifically!
+
+**NOTE: This tool is highly experimental.**
 
 ## Features
 
