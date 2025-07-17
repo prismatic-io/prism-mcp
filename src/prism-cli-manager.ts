@@ -40,7 +40,9 @@ export class PrismCLIManager {
     const workDir = workingDirectory || process.env.WORKING_DIRECTORY;
     const url = prismaticUrl || process.env.PRISMATIC_URL;
     if (!workDir) {
-      throw new Error(`WORKING_DIRECTORY must be provided or set as environment variable. Provided: ${workDir}`);
+      throw new Error(
+        `WORKING_DIRECTORY must be provided or set as environment variable. Provided: ${workDir}`,
+      );
     }
 
     if (!PrismCLIManager.instance) {
@@ -75,13 +77,13 @@ export class PrismCLIManager {
    */
   public async executeCommand(
     command: string,
-    customCwd?: string
+    customCwd?: string,
   ): Promise<{ stdout: string; stderr: string }> {
     const isInstalled = await this.checkCLIInstallation();
 
     if (isInstalled !== true) {
       throw new Error(
-        `Prismatic CLI is not properly installed. Please ensure @prismatic-io/prism is installed in your project dependencies.`
+        `Prismatic CLI is not properly installed. Please ensure @prismatic-io/prism is installed in your project dependencies.`,
       );
     }
 
@@ -94,17 +96,14 @@ export class PrismCLIManager {
         },
       };
 
-      const { stdout, stderr } = await execAsync(
-        `${this.prismPath} ${command}`,
-        execOptions
-      );
+      const { stdout, stderr } = await execAsync(`${this.prismPath} ${command}`, execOptions);
 
       return { stdout: stdout.toString(), stderr: stderr.toString() };
     } catch (error) {
       throw new Error(
         `Failed to execute Prismatic CLI command: ${
           error instanceof Error ? error.message : String(error)
-        }`
+        }`,
       );
     }
   }
@@ -113,12 +112,12 @@ export class PrismCLIManager {
    * Checks if the user is currently logged in to Prismatic.
    * @returns {Promise<boolean>} A promise that resolves to true if logged in, false otherwise
    */
-  public async isLoggedIn(): Promise<{ result: string, isLoggedIn: boolean }> {
+  public async isLoggedIn(): Promise<{ result: string; isLoggedIn: boolean }> {
     try {
       const result = await this.me();
 
       return { result, isLoggedIn: !result.includes("Error: You are not logged") };
-    } catch(error) {
+    } catch (error) {
       return { result: error instanceof Error ? error.message : String(error), isLoggedIn: false };
     }
   }
@@ -161,9 +160,9 @@ export class PrismCLIManager {
   }
 
   /**
-  * Finds the path to the Prismatic CLI.
-  * @returns {string} The path to the Prismatic CLI
-  */
+   * Finds the path to the Prismatic CLI.
+   * @returns {string} The path to the Prismatic CLI
+   */
   private findPrismPath(): string {
     // Check if custom path is set via environment variable
     if (process.env.PRISM_PATH && existsSync(process.env.PRISM_PATH)) {
@@ -178,13 +177,15 @@ export class PrismCLIManager {
       "@prismatic-io",
       "prism",
       "lib",
-      "run.js"
+      "run.js",
     );
 
     if (existsSync(localBin)) {
       return localBin;
     }
 
-    throw new Error("Prismatic CLI not found. Please ensure @prismatic-io/prism is installed or set PRISM_PATH environment variable.");
+    throw new Error(
+      "Prismatic CLI not found. Please ensure @prismatic-io/prism is installed or set PRISM_PATH environment variable.",
+    );
   }
 }

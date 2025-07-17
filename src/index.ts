@@ -1,19 +1,29 @@
 #!/usr/bin/env node
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
+import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { snakeCase } from "lodash-es";
+import path from "node:path";
+import { z } from "zod";
+
 import { formatToolResult, lookupFlowUrl, buildCommand } from "./helpers.js";
 import { execAsync, PrismCLIManager } from "./prism-cli-manager.js";
-import { z } from "zod";
-import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import path from "node:path";
+import {
+  generateConfigPage,
+  generateConfigVar,
+  generateConnectionConfigVar,
+  generateDataSourceConfigVar,
+  generateFlowFile,
+} from "./generate.js";
 
 const server = new McpServer({
   name: "prism-mcp",
   version: "1.0.0",
 });
 
+// General tools
 server.tool(
   "prism_me",
-  "Check Prismtic login status and display current user profile information",
+  "Check Prismatic login status and display current user profile information",
   {},
   async () => {
     try {
@@ -23,27 +33,7 @@ server.tool(
     } catch (error) {
       throw new Error(`Failed to get user info: ${(error as Error).message}`);
     }
-  }
-);
-
-server.tool(
-  "prism_integrations_list",
-  "List all integrations in your organization",
-  {},
-  async ({}) => {
-    try {
-      const manager = PrismCLIManager.getInstance();
-      const command = buildCommand("integrations:list", {
-        output: "json",
-      });
-      const { stdout } = await manager.executeCommand(command);
-      return formatToolResult(stdout, "integrations");
-    } catch (error) {
-      throw new Error(
-        `Failed to list integrations: ${(error as Error).message}`
-      );
-    }
-  }
+  },
 );
 
 server.tool(
@@ -61,7 +51,26 @@ server.tool(
     } catch (error) {
       throw new Error(`Failed to list components: ${(error as Error).message}`);
     }
-  }
+  },
+);
+
+// CNI development tools
+server.tool(
+  "prism_integrations_list",
+  "List all integrations in your organization",
+  {},
+  async () => {
+    try {
+      const manager = PrismCLIManager.getInstance();
+      const command = buildCommand("integrations:list", {
+        output: "json",
+      });
+      const { stdout } = await manager.executeCommand(command);
+      return formatToolResult(stdout, "integrations");
+    } catch (error) {
+      throw new Error(`Failed to list integrations: ${(error as Error).message}`);
+    }
+  },
 );
 
 server.tool(
@@ -71,10 +80,7 @@ server.tool(
     name: z
       .string()
       .min(1)
-      .regex(
-        /^[a-zA-Z0-9_-]+$/,
-        "Name must be alphanumeric with hyphens and underscores only"
-      ),
+      .regex(/^[a-zA-Z0-9_-]+$/, "Name must be alphanumeric with hyphens and underscores only"),
     directory: z.string().optional(),
   },
   async ({ name, directory }) => {
@@ -86,36 +92,9 @@ server.tool(
       const { stdout } = await manager.executeCommand(command);
       return formatToolResult(stdout);
     } catch (error) {
-      throw new Error(
-        `Failed to initialize integration: ${(error as Error).message}`
-      );
+      throw new Error(`Failed to initialize integration: ${(error as Error).message}`);
     }
-  }
-);
-
-server.tool(
-  "prism_components_init",
-  "Initialize a new Prismatic custom component",
-  {
-    name: z.string().min(1),
-    wsdlPath: z.string().optional(),
-    openApiPath: z.string().optional(),
   },
-  async ({ name, wsdlPath, openApiPath }) => {
-    try {
-      const manager = PrismCLIManager.getInstance();
-      const command = buildCommand(`components:init ${name}`, {
-        "wsdl-path": wsdlPath,
-        "open-api-path": openApiPath,
-      });
-      const { stdout } = await manager.executeCommand(command);
-      return formatToolResult(stdout);
-    } catch (error) {
-      throw new Error(
-        `Failed to initialize component: ${(error as Error).message}`
-      );
-    }
-  }
 );
 
 server.tool(
@@ -137,11 +116,9 @@ server.tool(
       const { stdout } = await manager.executeCommand(command);
       return formatToolResult(stdout);
     } catch (error) {
-      throw new Error(
-        `Failed to convert integration: ${(error as Error).message}`
-      );
+      throw new Error(`Failed to convert integration: ${(error as Error).message}`);
     }
-  }
+  },
 );
 
 server.tool(
@@ -151,14 +128,11 @@ server.tool(
   async ({ integrationId, columns }) => {
     try {
       const manager = PrismCLIManager.getInstance();
-      const command = buildCommand(
-        `integrations:flows:list "${integrationId}"`,
-        {
-          extended: true,
-          columns,
-          output: "json",
-        }
-      );
+      const command = buildCommand(`integrations:flows:list "${integrationId}"`, {
+        extended: true,
+        columns,
+        output: "json",
+      });
 
       const { stdout } = await manager.executeCommand(command);
 
@@ -166,7 +140,7 @@ server.tool(
     } catch (error) {
       throw new Error(`Failed to list flows: ${(error as Error).message}`);
     }
-  }
+  },
 );
 
 server.tool(
@@ -203,22 +177,16 @@ server.tool(
 
       if ((tailLogs || tailResults) && !timeout) {
         throw new Error(
-          "If tailing logs or step results via MCP server, a timeout (in seconds) is required."
+          "If tailing logs or step results via MCP server, a timeout (in seconds) is required.",
         );
       }
 
       // If no direct URL provided, we need to look it up
       if (!testUrl) {
         if (!integrationId) {
-          throw new Error(
-            "integrationId is required when flowUrl is not provided"
-          );
+          throw new Error("integrationId is required when flowUrl is not provided");
         }
-        testUrl = await lookupFlowUrl(
-          integrationId,
-          flowId,
-          flowName
-        );
+        testUrl = await lookupFlowUrl(integrationId, flowId, flowName);
       }
 
       // Build the test command
@@ -241,7 +209,196 @@ server.tool(
     } catch (error) {
       throw new Error(`Failed to test flow: ${(error as Error).message}`);
     }
-  }
+  },
+);
+
+server.tool(
+  "prism_integrations_import",
+  "Import a Prismatic code-native integration from a specific directory",
+  {
+    directory: z.string(),
+    integrationId: z.string().optional(),
+    path: z
+      .string()
+      .optional()
+      .describe("Path to the YAML definition of an integration to import. Not applicable to CNI"),
+    replace: z
+      .boolean()
+      .optional()
+      .describe(
+        "Allows replacing an existing integration regardless of code-native status. Requires integrationId.",
+      ),
+    iconPath: z
+      .string()
+      .optional()
+      .describe("Path to the PNG icon for the integration. Not applicable for CNI."),
+  },
+  async ({ directory, integrationId, path, replace, iconPath }) => {
+    try {
+      if (replace && !integrationId) {
+        throw new Error("If replace is true, an integrationId is required.");
+      }
+
+      const manager = PrismCLIManager.getInstance();
+
+      // First, run npm build in the integration directory
+      await execAsync("npm run build", { cwd: directory });
+
+      const command = buildCommand("integrations:import", {
+        integrationId,
+        path,
+        replace,
+        "icon-path": iconPath,
+      });
+
+      // Execute import command in the specified directory
+      const { stdout } = await manager.executeCommand(command, directory);
+      return formatToolResult(stdout);
+    } catch (error) {
+      throw new Error(`Failed to import integration: ${(error as Error).message}`);
+    }
+  },
+);
+
+// NOTE: May be deprecated soon.
+server.tool(
+  "prism_install_component_manifest",
+  "Generate line to add to a CNI's devDependencies that installs a Prismatic component manifest. Run `npm update --save` afterwards to fetch the correct version.",
+  {
+    name: z.string(),
+  },
+  async ({ name }) => {
+    try {
+      const result = JSON.stringify({ code: `"@component-manifests/${snakeCase(name)}": "*"` });
+      return formatToolResult(result);
+    } catch (error) {
+      throw new Error(`Failed to create flow boilerplate code: ${(error as Error).message}`);
+    }
+  },
+);
+
+server.tool(
+  "prism_integrations_generate_flow",
+  "Generate boilerplate file for a CNI flow. The result should be included in the CNI's list of available flows.",
+  {
+    name: z.string(),
+  },
+  async ({ name }) => {
+    try {
+      const result = JSON.stringify({ code: generateFlowFile(name) });
+      return formatToolResult(result);
+    } catch (error) {
+      throw new Error(`Failed to create flow boilerplate code: ${(error as Error).message}`);
+    }
+  },
+);
+
+server.tool(
+  "prism_integrations_generate_config_page",
+  "Generate boilerplate code for a CNI config page. The result should be included in the CNI's configPages object.",
+  {
+    name: z.string(),
+  },
+  async ({ name }) => {
+    try {
+      const result = JSON.stringify({ code: generateConfigPage(name) });
+      return formatToolResult(result);
+    } catch (error) {
+      throw new Error(`Failed to create config page boilerplate code: ${(error as Error).message}`);
+    }
+  },
+);
+
+server.tool(
+  "prism_integrations_generate_config_var",
+  "Generate boilerplate code for a config variable. The result should be included in a CNI's existing config page.",
+  {
+    name: z.string(),
+    dataType: z.string(),
+  },
+  async ({ name, dataType }) => {
+    try {
+      const result = JSON.stringify({ code: generateConfigVar(name, dataType) });
+      return formatToolResult(result);
+    } catch (error) {
+      throw new Error(`Failed to create config var boilerplate code: ${(error as Error).message}`);
+    }
+  },
+);
+
+server.tool(
+  "prism_integrations_generate_connection_config_var",
+  "Generate boilerplate code for a connection config variable. The result should be included in a CNI's existing config page.",
+  {
+    name: z.string(),
+    componentRef: z
+      .object({
+        component: z.string(),
+        key: z.string(),
+      })
+      .optional(),
+  },
+  async ({ name, componentRef }) => {
+    try {
+      const result = JSON.stringify({ code: generateConnectionConfigVar(name, componentRef) });
+      return formatToolResult(result);
+    } catch (error) {
+      throw new Error(
+        `Failed to create connection config var boilerplate code: ${(error as Error).message}`,
+      );
+    }
+  },
+);
+
+server.tool(
+  "prism_integrations_generate_datasource_config_var",
+  "Generate boilerplate code for a datasource config variable. The result should be included in a CNI's existing config page.",
+  {
+    name: z.string(),
+    dataType: z.string(),
+    componentRef: z
+      .object({
+        component: z.string(),
+        key: z.string(),
+      })
+      .optional(),
+  },
+  async ({ name, dataType, componentRef }) => {
+    try {
+      const result = JSON.stringify({
+        code: generateDataSourceConfigVar(name, dataType, componentRef),
+      });
+      return formatToolResult(result);
+    } catch (error) {
+      throw new Error(
+        `Failed to create connection config var boilerplate code: ${(error as Error).message}`,
+      );
+    }
+  },
+);
+
+// Component development tools
+server.tool(
+  "prism_components_init",
+  "Initialize a new Prismatic custom component",
+  {
+    name: z.string().min(1),
+    wsdlPath: z.string().optional(),
+    openApiPath: z.string().optional(),
+  },
+  async ({ name, wsdlPath, openApiPath }) => {
+    try {
+      const manager = PrismCLIManager.getInstance();
+      const command = buildCommand(`components:init ${name}`, {
+        "wsdl-path": wsdlPath,
+        "open-api-path": openApiPath,
+      });
+      const { stdout } = await manager.executeCommand(command);
+      return formatToolResult(stdout);
+    } catch (error) {
+      throw new Error(`Failed to initialize component: ${(error as Error).message}`);
+    }
+  },
 );
 
 server.tool(
@@ -258,13 +415,23 @@ server.tool(
     commitUrl: z.string().optional(),
     skipOnSignatureMatch: z.boolean().optional(),
   },
-  async ({ directory, comment, pullRequestUrl, repoUrl, noCheckSignature, customer, commitHash, commitUrl, skipOnSignatureMatch }) => {
+  async ({
+    directory,
+    comment,
+    pullRequestUrl,
+    repoUrl,
+    noCheckSignature,
+    customer,
+    commitHash,
+    commitUrl,
+    skipOnSignatureMatch,
+  }) => {
     try {
       const manager = PrismCLIManager.getInstance();
-      
+
       // First, run npm build in the component directory
       await execAsync("npm run build", { cwd: directory });
-      
+
       const command = buildCommand("components:publish", {
         comment,
         pullRequestUrl,
@@ -276,51 +443,14 @@ server.tool(
         commitUrl,
         "skip-on-signature-match": skipOnSignatureMatch,
       });
-      
+
       // Execute publish command in the specified directory
       const { stdout } = await manager.executeCommand(command, directory);
       return formatToolResult(stdout);
     } catch (error) {
       throw new Error(`Failed to publish component: ${(error as Error).message}`);
     }
-  }
-);
-
-server.tool(
-  "prism_integrations_import",
-  "Import a Prismatic code-native integration from a specific directory",
-  {
-    directory: z.string(),
-    integrationId: z.string().optional(),
-    path: z.string().optional().describe("Path to the YAML definition of an integration to import. Not applicable to CNI"),
-    replace: z.boolean().optional().describe("Allows replacing an existing integration regardless of code-native status. Requires integrationId."),
-    iconPath: z.string().optional().describe("Path to the PNG icon for the integration. Not applicable for CNI."),
   },
-  async ({ directory, integrationId, path, replace, iconPath }) => {
-    try {
-      if (replace && !integrationId) {
-        throw new Error("If replace is true, an integrationId is required.");
-      }
-
-      const manager = PrismCLIManager.getInstance();
-      
-      // First, run npm build in the integration directory
-      await execAsync("npm run build", { cwd: directory });
-      
-      const command = buildCommand("integrations:import", {
-        integrationId,
-        path,
-        replace,
-        "icon-path": iconPath,
-      });
-      
-      // Execute import command in the specified directory
-      const { stdout } = await manager.executeCommand(command, directory);
-      return formatToolResult(stdout);
-    } catch (error) {
-      throw new Error(`Failed to import integration: ${(error as Error).message}`);
-    }
-  }
 );
 
 server.tool(
@@ -341,28 +471,31 @@ server.tool(
       await execAsync("npm run build", { cwd: componentDir });
 
       const command = buildCommand("component-manifest", {
-        "output-dir": outputDir ? path.join(outputDir, `${path.basename(componentDir) || name}-manifest`): "",
+        "output-dir": outputDir
+          ? path.join(outputDir, `${path.basename(componentDir) || name}-manifest`)
+          : "",
         registry,
         "dry-run": dryRun,
         "skip-signature-verify": skipSignatureVerify,
         version,
         name,
-      })
+      });
 
       const { stdout } = await execAsync(command, { cwd: componentDir });
       return formatToolResult(stdout);
     } catch (error) {
       throw new Error(`Failed to generate component manifest: ${(error as Error).message}`);
     }
-  }
+  },
 );
 
+// Server setup
 async function main() {
   try {
     // Initialize the manager with working directory from environment
     const manager = PrismCLIManager.getInstance(
       process.env.WORKING_DIRECTORY,
-      process.env.PRISMATIC_URL
+      process.env.PRISMATIC_URL,
     );
     const transport = new StdioServerTransport();
     await server.connect(transport);
@@ -370,7 +503,7 @@ async function main() {
   } catch (error) {
     console.error(
       "Error: Failed to start Prism MCP server:",
-      error instanceof Error ? error.message : String(error)
+      error instanceof Error ? error.message : String(error),
     );
     process.exit(1);
   }
