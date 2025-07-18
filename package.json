@@ -7,22 +7,25 @@
   "scripts": {
     "build": "tsc && chmod 755 dist/index.js",
     "dev": "tsx src/index.ts",
-    "start": "node dist/index.js"
+    "start": "node dist/index.js",
+    "lint": "biome lint .",
+    "format": "biome format . --write",
+    "check": "biome check ."
   },
-  "keywords": [
-    "mcp",
-    "prismatic",
-    "prism",
-    "cli"
-  ],
+  "keywords": ["mcp", "prismatic", "prism", "cli"],
   "author": "",
   "license": "MIT",
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.12.1",
     "@prismatic-io/prism": "^7.5.6",
-    "@types/node": "^22.15.30",
+    "lodash-es": "^4.17.21",
     "tsx": "^4.19.4",
     "typescript": "^5.8.3",
     "zod": "^3.25.0"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^1.6.3",
+    "@types/lodash-es": "^4.17.12",
+    "@types/node": "^22.15.30"
   }
 }
