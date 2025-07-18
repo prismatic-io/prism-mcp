@@ -30,7 +30,7 @@ server.tool(
   "prism_integrations_list",
   "List all integrations in your organization",
   {},
-  async ({}) => {
+  async () => {
     try {
       const manager = PrismCLIManager.getInstance();
       const command = buildCommand("integrations:list", {
