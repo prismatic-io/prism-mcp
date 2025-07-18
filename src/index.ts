@@ -555,30 +555,42 @@ function registerComponentTools() {
   );
 }
 
-function registerTools(toolset?: string) {
-  if (toolset && !VALID_TOOLSETS.includes(toolset)) {
-    throw Error(
-      `Invalid toolset: ${toolset}. Valid categories are: ${VALID_TOOLSETS.join(", ")}`
+function registerTools(toolsets: string[] = []) {
+  if (toolsets && toolsets.length > 0) {
+    const invalidToolsets = toolsets.filter(
+      (toolset) => !VALID_TOOLSETS.includes(toolset)
     );
+    if (invalidToolsets.length > 0) {
+      throw Error(`Invalid toolset: ${invalidToolsets.join(", ")}. Valid categories are: ${VALID_TOOLSETS.join(", ")}`);
+    }
   }
 
   registerGeneralTools();
 
-  switch (toolset) {
-    case "component":
-      registerComponentTools();
-      break;
-    case "integration":
-      registerIntegrationTools();
-      break;
-    default:
-      registerComponentTools();
-      registerIntegrationTools();
-      break;
+  if (toolsets.length > 0) {
+    toolsets.forEach((toolset) => {
+      switch (toolset) {
+        case "component":
+          registerComponentTools();
+          break;
+        case "integration":
+          registerIntegrationTools();
+          break;
+        default:
+          break;
+      }
+    });
+  } else {
+    registerComponentTools();
+    registerIntegrationTools();
   }
 }
 
-registerTools(process.env.TOOLSET);
+const toolsetsEnv = process.env.TOOLSETS;
+const toolsets = toolsetsEnv
+  ? toolsetsEnv.split(/[,\s]+/).filter((ts) => ts.trim().length > 0)
+  : [];
+registerTools(toolsets);
 
 async function main() {
   try {
