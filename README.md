@@ -58,6 +58,8 @@ This MCP server provides the following tools:
 
 Configuration location and methods vary slightly depending on the AI tool you are using, but the following is relatively standard. More specific instructions for Claude and Cursor are below.
 
+Example setup:
+
 ```json
 {
   "mcpServers": {
@@ -82,6 +84,7 @@ Environment variable options:
 * `WORKING_DIRECTORY`: **Required.** Determines where Prism CLI commands are run from.
 * `PRISMATIC_URL`: Optional. `https://app.prismatic.io` by default.
 * `PRISM_PATH`: Optional. For pointing to a specific installation of `prism`.
+* `TOOLSET`: Optional. Specify the development toolset you'd like to use -- `integration`, `component`, or by default all tools. Being selective about what tools to register may improve performance.
 
 ### With Claude Desktop or Claude Code
 
