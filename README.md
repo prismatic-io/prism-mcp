@@ -78,15 +78,11 @@ If no `TOOLSETS` environment variable is set, all tools are registered by defaul
 
 ## Usage
 
-### Working directories
-
-As part of your configuration, you need to define the `WORKING_DIRECTORY` that this tool will run from. This is the directory that, by default, your `prism` commands will run from. So for example, if you are in `/path/to/my-cni` and init an integration named "my-cni", you'll end up with a folder structure like `/path/to/my-cni/my-cni`. I recommend setting to the `WORKING_DIRECTORY` the parent directory of your Prismatic-related projects. 
-
-Relatedly, the `components_publish` and `integrations_import` tools will now accept directory arguments so publishes will occur from the correct subdirectory.
-
 ### Config
 
 Configuration location and methods vary slightly depending on the AI tool you are using, but the following is relatively standard. More specific instructions for Claude and Cursor are below.
+
+Example setup:
 
 ```json
 {
@@ -109,9 +105,10 @@ Replace the path args as needed.
 
 Environment variable options:
 
-* `WORKING_DIRECTORY`: Required. Determines where Prism CLI commands are run from.
+* `WORKING_DIRECTORY`: **Required.** Determines where Prism CLI commands are run from.
 * `PRISMATIC_URL`: Optional. `https://app.prismatic.io` by default.
 * `PRISM_PATH`: Optional. For pointing to a specific installation of `prism`.
+* `TOOLSETS`: Optional. Specify the development toolsets you'd like to use -- `integration`, `component`, or by default all tools. Being selective about what tools to register may improve performance.
 
 ### With Claude Desktop or Claude Code
 
