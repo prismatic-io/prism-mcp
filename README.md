@@ -4,23 +4,47 @@
 
 In the future, we may extend this MCP server to include other actions that may be helpful to Prismatic Code-Native devs, even if they're not currently available in [prism](https://github.com/prismatic-io/prism). So despite the name, imagine that this is really a "Prismatic Dev Ex Server" rather than just a `prism` wrapper specifically!
 
-**NOTE: This tool is highly experimental.**
+**NOTE: This tool is currently in an experimental version.**
 
 ## Features
 
-This MCP server provides the following tools:
+This MCP server provides several tools, organized into categories:
 
+### General Tools (Always Available)
 - **prism_me**: Check login status and display current user profile information
-- **prism_integrations_list**: List all integrations with filtering options
+- **prism_components_list**: List all available components with version options
+
+### Integration Tools (Toolset: "integration")
+
+#### Utilities
+- **prism_integrations_list**: List all integrations
 - **prism_integrations_init**: Initialize a new Code Native Integration
 - **prism_integrations_convert**: Convert a Low-Code Integration's YAML file to Code Native
 - **prism_integrations_flows_list**: List flows for an integration
-- **prism_integrations_import**: Import an integration from a specific directory
 - **prism_integrations_flows_test**: Test a flow in an integration
-- **prism_components_list**: List all available components with version options
+- **prism_integrations_import**: Import an integration from a specific directory
+
+#### Codegen
+- **prism_install_component_manifest**: Generate line to add to a CNI's devDependencies that installs a Prismatic component manifest
+- **prism_integrations_generate_flow**: Generate boilerplate file for a CNI flow
+- **prism_integrations_generate_config_page**: Generate boilerplate code for a CNI config page
+- **prism_integrations_generate_config_var**: Generate boilerplate code for a config variable
+- **prism_integrations_generate_connection_config_var**: Generate boilerplate code for a connection config variable
+- **prism_integrations_generate_datasource_config_var**: Generate boilerplate code for a datasource config variable
+
+### Component Tools (Toolset: "component")
 - **prism_components_init**: Initialize a new Component (supports WSDL/OpenAPI generation)
 - **prism_components_publish**: Publish a component from a specific directory
 - **prism_components_generate_manifest**: Generate the manifest for a Prismatic component
+
+### Toolset Configuration
+
+Tools are organized into **toolsets** that can be selectively enabled via the `TOOLSETS` environment variable:
+- **`integration`** - Enables all integration-related tools
+- **`component`** - Enables all component-related tools
+- **General tools** are always available regardless of toolset configuration
+
+If no `TOOLSETS` environment variable is set, all tools are registered by default.
 
 ## Prerequisites
 
