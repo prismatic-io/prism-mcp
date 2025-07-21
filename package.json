@@ -1,9 +1,28 @@
 {
-  "name": "prism-mcp",
+  "name": "@prismatic-io/prism-mcp",
   "version": "1.0.0",
   "description": "MCP server that wraps Prismatic's Prism CLI tool",
+  "keywords": ["prismatic"],
   "main": "dist/index.js",
   "type": "module",
+  "homepage": "https://prismatic.io",
+  "bugs": {
+    "url": "https://github.com/prismatic-io/prism-mcp/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/prismatic-io/prism-mcp.git"
+  },
+  "publishConfig": {
+    "access": "public",
+    "tag": "next",
+    "registry": "https://registry.npmjs.org"
+  },
+  "files": ["dist/"],
+  "license": "MIT",
+  "bin": {
+    "prism-mcp": "./dist/index.js"
+  },
   "scripts": {
     "build": "tsc && chmod 755 dist/index.js",
     "dev": "tsx src/index.ts",
@@ -12,9 +31,6 @@
     "format": "biome format . --write",
     "check": "biome check ."
   },
-  "keywords": ["mcp", "prismatic", "prism", "cli"],
-  "author": "",
-  "license": "MIT",
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.12.1",
     "@prismatic-io/prism": "^7.5.6",

@@ -15,7 +15,7 @@ export const ${camelCase(name)} = flow({
   },
   onExecution: async (context, params) => {
     // Put your logic here.
-    return { data: response.data };
+    return { data: null };
   },
 });
 
