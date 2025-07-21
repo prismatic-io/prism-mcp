@@ -1,14 +1,12 @@
 # Prism MCP Server
 
-`prism-mcp` is a local MCP (Model Context Protocol) server that wraps Prismatic's Prism CLI tool, allowing AI assistants to interact with Prismatic dev tooling directly.
-
-In the future, we may extend this MCP server to include other actions that may be helpful to Prismatic Code-Native devs, even if they're not currently available in [prism](https://github.com/prismatic-io/prism). So despite the name, imagine that this is really a "Prismatic Dev Ex Server" rather than just a `prism` wrapper specifically!
+`prism-mcp` is a local MCP (Model Context Protocol) server that enables AI assistants to better support Code-Native Integration & component development via the Prismatic SDK.
 
 **NOTE: This tool is currently in an experimental version.**
 
 ## Features
 
-This MCP server provides several tools, organized into categories:
+This MCP server provides several tools, organized into categories. You may register whatever set of tools are most relevant to your use case.
 
 ### General Tools (Always Available)
 - **prism_me**: Check login status and display current user profile information
@@ -117,3 +115,7 @@ To use this MCP server with Claude Code, add the above config to your working di
 ### With Cursor
 
 You can configure available MCP Servers via `Cursor Settings` > `MCP Tools`, then add the above config to your `mcp.json` file.
+
+## License
+
+This repository is MIT licensed.
