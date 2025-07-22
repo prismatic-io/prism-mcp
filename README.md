@@ -78,7 +78,7 @@ If no `TOOLSETS` environment variable is set, all tools are registered by defaul
 
 ### Config
 
-Configuration location and methods vary slightly depending on the AI tool you are using, but the following is relatively standard. More specific instructions for Claude and Cursor are below.
+Configuration location and methods vary slightly depending on the AI tool you are using, but the following is relatively standard. More specific instructions are below.
 
 Example setup:
 
@@ -115,6 +115,14 @@ To use this MCP server with Claude Code, add the above config to your working di
 ### With Cursor
 
 You can configure available MCP Servers via `Cursor Settings` > `MCP Tools`, then add the above config to your `mcp.json` file.
+
+### With VS Code / GitHub Copilot
+
+Add the above config to the `.vscode/mcp.json` in your workspace, or the global `mcp.json` file (accessible via the "Add MCP Server..." option in the Command Palette).
+
+### Other tools
+
+If your agent of choice is not listed, please reference their official documentation for setup instructions.
 
 ## License
 
