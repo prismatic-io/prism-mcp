@@ -3,9 +3,11 @@
   <h1>@prismatic-io/prism-mcp</h1>
 </div>
 
-**Prism MCP Server** (`prism-mcp`) is a local Model Context Protocol (MCP) server that enables AI assistants to better support Code-Native Integration & component development via the Prismatic SDK.
+**Prism MCP Server** is a local Model Context Protocol (MCP) server that helps AI assistants work with the Prismatic API for code-native integration and custom component development.
 
-> Note: This tool is currently in an experimental version.
+> **Preview Feature**
+>
+> `prism-mcp` is currently in development and may change in future releases.
 
 ## Features
 
