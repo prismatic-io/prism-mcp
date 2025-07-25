@@ -6,3 +6,6 @@ dist/
 .env.local
 .env.*.local
 .claude
+.mcp.json
+package-lock.json
+package.json

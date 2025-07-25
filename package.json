@@ -2,7 +2,9 @@
   "name": "@prismatic-io/prism-mcp",
   "version": "1.0.0",
   "description": "MCP server that wraps Prismatic's Prism CLI tool",
-  "keywords": ["prismatic"],
+  "keywords": [
+    "prismatic"
+  ],
   "main": "dist/index.js",
   "type": "module",
   "homepage": "https://prismatic.io",
@@ -18,7 +20,9 @@
     "tag": "next",
     "registry": "https://registry.npmjs.org"
   },
-  "files": ["dist/"],
+  "files": [
+    "dist/"
+  ],
   "license": "MIT",
   "bin": {
     "prism-mcp": "./dist/index.js"
@@ -33,7 +37,7 @@
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.12.1",
-    "@prismatic-io/prism": "^7.5.6",
+    "@prismatic-io/prism": "^4.2.11",
     "lodash-es": "^4.17.21",
     "tsx": "^4.19.4",
     "typescript": "^5.8.3",
