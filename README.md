@@ -31,12 +31,13 @@ This MCP server provides several tools, organized into categories. You may regis
 
 #### Codegen
 
-- **prism_install_component_manifest**: Generate line to add to a CNI's devDependencies that installs a Prismatic component manifest
+- **prism_install_component_manifest**: Generate component manifest in CNI src directory (requires spectral@10.6.0 or greater)
+- **prism_install_legacy_component_manifest**: Generate line to add to a CNI's devDependencies for legacy component manifest installation
 - **prism_integrations_generate_flow**: Generate boilerplate file for a CNI flow
 - **prism_integrations_generate_config_page**: Generate boilerplate code for a CNI config page
 - **prism_integrations_generate_config_var**: Generate boilerplate code for a config variable
-- **prism_integrations_generate_connection_config_var**: Generate boilerplate code for a connection config variable
-- **prism_integrations_generate_datasource_config_var**: Generate boilerplate code for a datasource config variable
+- **prism_integrations_add_connection_config_var**: Returns path to connection wrapper function if available, otherwise generates boilerplate code for a connection config variable
+- **prism_integrations_add_datasource_config_var**: Returns path to datasource wrapper function if available, otherwise generates boilerplate code for a datasource config variable
 
 ### Component Tools (Toolset: "component")
 

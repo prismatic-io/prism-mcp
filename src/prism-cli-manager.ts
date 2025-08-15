@@ -1,13 +1,13 @@
 import { exec } from "node:child_process";
-import { promisify } from "node:util";
-import { existsSync } from "fs";
 import * as path from "node:path";
 import { fileURLToPath } from "node:url";
+import { promisify } from "node:util";
+import { existsSync } from "fs";
+
+export const execAsync = promisify(exec);
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-
-export const execAsync = promisify(exec);
 
 export const DEFAULT_PRISMATIC_URL = "https://app.prismatic.io/";
 
@@ -83,7 +83,7 @@ export class PrismCLIManager {
 
     if (isInstalled !== true) {
       throw new Error(
-        `Prismatic CLI is not properly installed. Please ensure @prismatic-io/prism is installed in your project dependencies.`,
+        "Prismatic CLI is not properly installed. Please ensure @prismatic-io/prism is installed in your project dependencies.",
       );
     }
 
