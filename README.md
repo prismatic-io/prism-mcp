@@ -68,26 +68,6 @@ If no `TOOLSETS` environment variable is set, all tools are registered by defaul
    prism login
    ```
 
-## Installation
-
-1. Clone this repository:
-
-   ```bash
-   git clone <repository-url>
-   cd prism-mcp
-   ```
-
-2. Install dependencies:
-
-   ```bash
-   npm install
-   ```
-
-3. Build the project:
-   ```bash
-   npm run build
-   ```
-
 ## Usage
 
 ### Config
@@ -101,7 +81,7 @@ Example setup:
   "mcpServers": {
     "prism": {
       "type": "stdio",
-      "command": "node",
+      "command": "npx @prismatic-io/prism-mcp",
       "args": ["/path/to/prism-mcp/dist/index.js"],
       "env": {
         "WORKING_DIRECTORY": "/path/to/the/work/dir/"
