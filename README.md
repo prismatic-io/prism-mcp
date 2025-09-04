@@ -68,26 +68,6 @@ If no `TOOLSETS` environment variable is set, all tools are registered by defaul
    prism login
    ```
 
-## Installation
-
-1. Clone this repository:
-
-   ```bash
-   git clone <repository-url>
-   cd prism-mcp
-   ```
-
-2. Install dependencies:
-
-   ```bash
-   npm install
-   ```
-
-3. Build the project:
-   ```bash
-   npm run build
-   ```
-
 ## Usage
 
 ### Config
@@ -101,11 +81,9 @@ Example setup:
   "mcpServers": {
     "prism": {
       "type": "stdio",
-      "command": "node",
-      "args": ["/path/to/prism-mcp/dist/index.js"],
-      "env": {
-        "WORKING_DIRECTORY": "/path/to/the/work/dir/"
-      }
+      "command": "npx @prismatic-io/prism-mcp",
+      "args": ["-y", "/path/to/the/work/dir/"],
+      "env": {}
     }
   }
 }
@@ -113,12 +91,15 @@ Example setup:
 
 Replace the path args as needed.
 
-Environment variable options:
+Command-line arguments:
 
-- `WORKING_DIRECTORY`: **Required.** Determines where Prism CLI commands are run from.
-- `PRISMATIC_URL`: Optional. `https://app.prismatic.io` by default.
-- `PRISM_PATH`: Optional. For pointing to a specific installation of `prism`.
-- `TOOLSETS`: Optional. Specify the development toolsets you'd like to use -- `integration`, `component`, or by default all tools. Being selective about what tools to register may improve performance.
+- First argument: **Required.** Working directory path that determines where Prism CLI commands are run from.
+- Remaining arguments: **Optional.** Toolsets to enable (`integration`, `component`). If no toolsets are specified, all tools are registered by default. Being selective about toolsets may improve performance.
+
+Optional environment variable options:
+
+- `PRISMATIC_URL`: `https://app.prismatic.io` by default.
+- `PRISM_PATH`: For pointing to a specific installation of `prism`.
 
 ### With Claude Desktop or Claude Code
 
