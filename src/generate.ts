@@ -32,7 +32,11 @@ ${name}: configPage({
 `;
 }
 
-export function generateConfigVar(name: string, dataType: string, description?: string): string {
+export function generateConfigVar(
+  name: string,
+  dataType: string,
+  description?: string
+): string {
   return `
 "${name}": configVar({
   stableKey: "${kebabCase(name)}",
@@ -46,6 +50,7 @@ export function generateConnectionConfigVar(
   name: string,
   componentRef?: { componentKey: string; connectionKey: string },
   directory?: string,
+  forceLegacy?: boolean
 ): string {
   const isComponentRef = componentRef?.componentKey;
   if (isComponentRef) {
@@ -54,6 +59,10 @@ export function generateConnectionConfigVar(
 
     if (manifestInSrc) {
       return connectionPath;
+    } else if (!forceLegacy) {
+      throw new Error(
+        `A component manifest was not found for ${componentRef.componentKey}. Attempt prism_install_component_manifest or prism_install_legacy_component_manifest first.`
+      );
     }
 
     return `
@@ -87,6 +96,7 @@ export function generateDataSourceConfigVar(
   dataType: string,
   componentRef?: { componentKey: string; dataSourceKey: string },
   directory?: string,
+  forceLegacy?: boolean,
 ): string {
   const isComponentRef = componentRef?.componentKey;
   if (isComponentRef) {
@@ -95,6 +105,10 @@ export function generateDataSourceConfigVar(
 
     if (manifestInSrc) {
       return dataSourcePath;
+    } else if (!forceLegacy) {
+      throw new Error(
+        `A component manifest was not found for ${componentRef.componentKey}. Attempt prism_install_component_manifest or prism_install_legacy_component_manifest first.`
+      );
     }
 
     return `
@@ -106,7 +120,9 @@ export function generateDataSourceConfigVar(
     key: "${componentRef.dataSourceKey}",
     values: {
       // Populate values according to the provided component types.
-      // You may need to ensure that the ${componentRef.componentKey} component-manifest is installed.
+      // You may need to ensure that the ${
+        componentRef.componentKey
+      } component-manifest is installed.
     },
   },
 }),

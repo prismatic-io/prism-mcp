@@ -36,7 +36,14 @@ export class PrismCLIManager {
    * @returns {PrismCLIManager} The singleton instance of PrismCLIManager
    */
   public static getInstance(workingDirectory?: string, prismaticUrl?: string): PrismCLIManager {
-    // Use provided working directory or fall back to environment variable
+    if (PrismCLIManager.instance) {
+      if (prismaticUrl) {
+        PrismCLIManager.instance.prismaticUrl = prismaticUrl;
+      }
+      return PrismCLIManager.instance;
+    }
+
+    // For new instance creation, require working directory
     const workDir = workingDirectory || process.env.WORKING_DIRECTORY;
     const url = prismaticUrl || process.env.PRISMATIC_URL;
     if (!workDir) {
@@ -45,13 +52,7 @@ export class PrismCLIManager {
       );
     }
 
-    if (!PrismCLIManager.instance) {
-      PrismCLIManager.instance = new PrismCLIManager(workDir, url);
-    } else if (prismaticUrl) {
-      // Update the URL if a new one is provided
-      PrismCLIManager.instance.prismaticUrl = prismaticUrl;
-    }
-
+    PrismCLIManager.instance = new PrismCLIManager(workDir, url);
     return PrismCLIManager.instance;
   }
 
@@ -150,6 +151,14 @@ export class PrismCLIManager {
     const { stdout } = await this.executeCommand("--version");
 
     return stdout.trim();
+  }
+
+  /**
+   * Gets the working directory.
+   * @returns {string} The working directory
+   */
+  public getWorkingDirectory(): string {
+    return this.workingDirectory;
   }
 
   /**

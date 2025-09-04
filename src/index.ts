@@ -194,7 +194,7 @@ function registerIntegrationTools() {
 
         // Build the test command
         const manager = PrismCLIManager.getInstance();
-        const command = buildCommand(`integrations:flows:test`, {
+        const command = buildCommand("integrations:flows:test", {
           "flow-url": flowUrl,
           payload,
           "payload-content-type": payloadContentType,
@@ -273,14 +273,16 @@ function registerIntegrationTools() {
     async ({ directory, componentKey }) => {
       try {
         // First attempt to generate the component-manifest in src. This only works in versions of spectral > 10.6.0.
-        const command = `yarn cni-component-manifest ${componentKey}`;
+        // We are assuming npx is available because you need it to run this server in the first place.
+        const command = `npx cni-component-manifest ${componentKey}`;
+        const manager = PrismCLIManager.getInstance();
         const result = await execAsync(command, {
-          cwd: directory || process.env.WORKING_DIRECTORY,
+          cwd: directory || manager.getWorkingDirectory(),
         });
 
         return formatToolResult(result.stdout);
       } catch (error) {
-        throw new Error(`Failed to create flow boilerplate code: ${(error as Error).message}.`);
+        throw new Error(`Failed to generate boilerplate: ${(error as Error).message}.`);
       }
     },
   );
@@ -299,7 +301,7 @@ function registerIntegrationTools() {
         });
         return formatToolResult(result);
       } catch (error) {
-        throw new Error(`Failed to create flow boilerplate code: ${(error as Error).message}`);
+        throw new Error(`Failed to generate boilerplate: ${(error as Error).message}`);
       }
     },
   );
@@ -361,7 +363,7 @@ function registerIntegrationTools() {
 
   server.tool(
     "prism_integrations_add_connection_config_var",
-    "Returns the path to a file to fine a connection wrapper function. If not available, generates boilerplate code for a connection config variable. Results should be included in a CNI's existing config page.",
+    "Returns the path to a file that contains a connection wrapper function. If not available, generates boilerplate code for a connection config variable. Results should be included in a CNI's existing config page.",
     {
       name: z.string(),
       componentRef: z
@@ -371,14 +373,17 @@ function registerIntegrationTools() {
         })
         .optional(),
       directory: z.string().optional(),
+      forceLegacy: z.boolean().optional(),
     },
-    async ({ name, componentRef, directory }) => {
+    async ({ name, componentRef, directory, forceLegacy }) => {
       try {
+        const manager = PrismCLIManager.getInstance();
         const result = JSON.stringify({
           code: generateConnectionConfigVar(
             name,
             componentRef,
-            directory || process.env.WORKING_DIRECTORY,
+            directory || manager.getWorkingDirectory(),
+            forceLegacy,
           ),
         });
         return formatToolResult(result);
@@ -403,15 +408,18 @@ function registerIntegrationTools() {
         })
         .optional(),
       directory: z.string().optional(),
+      forceLegacy: z.boolean().optional(),
     },
-    async ({ name, dataType, componentRef, directory }) => {
+    async ({ name, dataType, componentRef, directory, forceLegacy }) => {
       try {
+        const manager = PrismCLIManager.getInstance();
         const result = JSON.stringify({
           code: generateDataSourceConfigVar(
             name,
             dataType,
             componentRef,
-            directory || process.env.WORKING_DIRECTORY,
+            directory || manager.getWorkingDirectory(),
+            forceLegacy,
           ),
         });
         return formatToolResult(result);
@@ -568,16 +576,24 @@ function registerTools(toolsets: string[] = []) {
   }
 }
 
-const toolsetsEnv = process.env.TOOLSETS;
-const toolsets = toolsetsEnv
-  ? toolsetsEnv.split(/[,\s]+/).filter((ts) => ts.trim().length > 0)
-  : [];
-registerTools(toolsets);
-
 async function main() {
   try {
-    // Initialize the manager with working directory from environment
-    PrismCLIManager.getInstance(process.env.WORKING_DIRECTORY, process.env.PRISMATIC_URL);
+    // Parse command line arguments
+    const args = process.argv.slice(2);
+    const workingDirectory = args[0];
+    const toolsetsArg = args.slice(1); // Remaining arguments are toolsets
+    
+    if (!workingDirectory) {
+      console.error("Error: WORKING_DIRECTORY argument is required");
+      console.error("Usage: prism-mcp <working-directory> [toolsets...]");
+      process.exit(1);
+    }
+
+    // Initialize the manager with working directory from command line first
+    PrismCLIManager.getInstance(workingDirectory, process.env.PRISMATIC_URL);
+    
+    // Then register tools with specified toolsets (or all if none specified)
+    registerTools(toolsetsArg);
     const transport = new StdioServerTransport();
     await server.connect(transport);
     console.error("Prism MCP server running");
