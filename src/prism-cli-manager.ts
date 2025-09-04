@@ -44,15 +44,12 @@ export class PrismCLIManager {
     }
 
     // For new instance creation, require working directory
-    const workDir = workingDirectory || process.env.WORKING_DIRECTORY;
-    const url = prismaticUrl || process.env.PRISMATIC_URL;
-    if (!workDir) {
-      throw new Error(
-        `WORKING_DIRECTORY must be provided or set as environment variable. Provided: ${workDir}`,
-      );
+    if (!workingDirectory) {
+      throw new Error("A working directory must be provided.");
     }
-
-    PrismCLIManager.instance = new PrismCLIManager(workDir, url);
+    
+    const url = prismaticUrl || process.env.PRISMATIC_URL;
+    PrismCLIManager.instance = new PrismCLIManager(workingDirectory, url);
     return PrismCLIManager.instance;
   }
 
