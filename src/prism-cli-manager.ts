@@ -1,8 +1,4 @@
-import { exec } from "node:child_process";
-import { promisify } from "node:util";
-import { findPrismPath } from "./helpers.js";
-
-export const execAsync = promisify(exec);
+import { execAsync, findPrismPath } from "./helpers.js";
 
 export const DEFAULT_PRISMATIC_URL = "https://app.prismatic.io/";
 

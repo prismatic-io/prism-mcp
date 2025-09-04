@@ -1,6 +1,10 @@
+import { exec } from "node:child_process";
 import { findExecutablePath } from "./findExecutablePath.js";
 import { PrismCLIManager } from "./prism-cli-manager.js";
 import { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
+import { promisify } from "node:util";
+
+export const execAsync = promisify(exec);
 
 /**
  * Parse output and format as CallToolResult
