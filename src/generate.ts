@@ -32,11 +32,7 @@ ${name}: configPage({
 `;
 }
 
-export function generateConfigVar(
-  name: string,
-  dataType: string,
-  description?: string
-): string {
+export function generateConfigVar(name: string, dataType: string, description?: string): string {
   return `
 "${name}": configVar({
   stableKey: "${kebabCase(name)}",
@@ -50,7 +46,7 @@ export function generateConnectionConfigVar(
   name: string,
   componentRef?: { componentKey: string; connectionKey: string },
   directory?: string,
-  forceLegacy?: boolean
+  forceLegacy?: boolean,
 ): string {
   const isComponentRef = componentRef?.componentKey;
   if (isComponentRef) {
@@ -61,7 +57,7 @@ export function generateConnectionConfigVar(
       return connectionPath;
     } else if (!forceLegacy) {
       throw new Error(
-        `A component manifest was not found for ${componentRef.componentKey}. Attempt prism_install_component_manifest or prism_install_legacy_component_manifest first.`
+        `A component manifest was not found for ${componentRef.componentKey}. Attempt prism_install_component_manifest or prism_install_legacy_component_manifest first.`,
       );
     }
 
@@ -107,7 +103,7 @@ export function generateDataSourceConfigVar(
       return dataSourcePath;
     } else if (!forceLegacy) {
       throw new Error(
-        `A component manifest was not found for ${componentRef.componentKey}. Attempt prism_install_component_manifest or prism_install_legacy_component_manifest first.`
+        `A component manifest was not found for ${componentRef.componentKey}. Attempt prism_install_component_manifest or prism_install_legacy_component_manifest first.`,
       );
     }
 

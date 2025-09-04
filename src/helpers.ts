@@ -1,5 +1,10 @@
+import { exec } from "node:child_process";
+import { findExecutablePath } from "./findExecutablePath.js";
 import { PrismCLIManager } from "./prism-cli-manager.js";
 import { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
+import { promisify } from "node:util";
+
+export const execAsync = promisify(exec);
 
 /**
  * Parse output and format as CallToolResult
@@ -84,4 +89,14 @@ export function buildCommand(baseCommand: string, options: Record<string, any>):
   }
 
   return command;
+}
+
+/**
+ * Find prism executable path.
+ */
+export async function findPrismPath(): Promise<string | null> {
+  return findExecutablePath("prism", {
+    npxFallback: "@prismatic-io/prism",
+    logPrefix: "findPrismPath",
+  });
 }

@@ -5,8 +5,8 @@ import { snakeCase } from "lodash-es";
 import path from "node:path";
 import { z } from "zod";
 
-import { formatToolResult, lookupFlowUrl, buildCommand } from "./helpers.js";
-import { execAsync, PrismCLIManager } from "./prism-cli-manager.js";
+import { formatToolResult, lookupFlowUrl, buildCommand, execAsync } from "./helpers.js";
+import { PrismCLIManager } from "./prism-cli-manager.js";
 import {
   generateConfigPage,
   generateConfigVar,
@@ -75,7 +75,6 @@ function registerIntegrationTools() {
       }
     },
   );
-
   server.tool(
     "prism_integrations_init",
     "Initialize a new Prismatic Code Native Integration (CNI)",
@@ -280,7 +279,13 @@ function registerIntegrationTools() {
           cwd: directory || manager.getWorkingDirectory(),
         });
 
-        return formatToolResult(result.stdout);
+        return formatToolResult(
+          JSON.stringify({
+            stdout: result.stdout,
+            instruction:
+              "The AI agent should update the componentRegistry file after installation.",
+          }),
+        );
       } catch (error) {
         throw new Error(`Failed to generate boilerplate: ${(error as Error).message}.`);
       }
@@ -296,10 +301,13 @@ function registerIntegrationTools() {
     },
     async ({ componentKey }) => {
       try {
-        const result = JSON.stringify({
-          code: `"@component-manifests/${snakeCase(componentKey)}": "*"`,
-        });
-        return formatToolResult(result);
+        return formatToolResult(
+          JSON.stringify({
+            code: `"@component-manifests/${snakeCase(componentKey)}": "*"`,
+            instruction:
+              "The AI agent should update the componentRegistry file after installation.",
+          }),
+        );
       } catch (error) {
         throw new Error(`Failed to generate boilerplate: ${(error as Error).message}`);
       }
@@ -550,7 +558,9 @@ function registerTools(toolsets: string[] = []) {
     const invalidToolsets = toolsets.filter((toolset) => !VALID_TOOLSETS.includes(toolset));
     if (invalidToolsets.length > 0) {
       throw Error(
-        `Invalid toolset: ${invalidToolsets.join(", ")}. Valid categories are: ${VALID_TOOLSETS.join(", ")}`,
+        `Invalid toolset: ${invalidToolsets.join(
+          ", ",
+        )}. Valid categories are: ${VALID_TOOLSETS.join(", ")}`,
       );
     }
   }
@@ -582,7 +592,7 @@ async function main() {
     const args = process.argv.slice(2);
     const workingDirectory = args[0];
     const toolsetsArg = args.slice(1); // Remaining arguments are toolsets
-    
+
     if (!workingDirectory) {
       console.error("Error: WORKING_DIRECTORY argument is required");
       console.error("Usage: prism-mcp <working-directory> [toolsets...]");
@@ -591,7 +601,7 @@ async function main() {
 
     // Initialize the manager with working directory from command line first
     PrismCLIManager.getInstance(workingDirectory, process.env.PRISMATIC_URL);
-    
+
     // Then register tools with specified toolsets (or all if none specified)
     registerTools(toolsetsArg);
     const transport = new StdioServerTransport();

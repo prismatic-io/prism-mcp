@@ -81,8 +81,12 @@ Example setup:
   "mcpServers": {
     "prism": {
       "type": "stdio",
-      "command": "npx @prismatic-io/prism-mcp",
-      "args": ["-y", "/path/to/the/work/dir/"],
+      "command": "npx",
+      "args": [
+        "-y",
+        "@prismatic-io/prism-mcp",
+        "/path/to/the/work/dir/"
+      ],
       "env": {}
     }
   }
@@ -99,7 +103,6 @@ Command-line arguments:
 Optional environment variable options:
 
 - `PRISMATIC_URL`: `https://app.prismatic.io` by default.
-- `PRISM_PATH`: For pointing to a specific installation of `prism`.
 
 ### With Claude Desktop or Claude Code
 

@@ -1,13 +1,4 @@
-import { exec } from "node:child_process";
-import * as path from "node:path";
-import { fileURLToPath } from "node:url";
-import { promisify } from "node:util";
-import { existsSync } from "fs";
-
-export const execAsync = promisify(exec);
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+import { execAsync, findPrismPath } from "./helpers.js";
 
 export const DEFAULT_PRISMATIC_URL = "https://app.prismatic.io/";
 
@@ -26,7 +17,7 @@ export class PrismCLIManager {
   private constructor(workingDirectory: string, prismaticUrl?: string) {
     this.workingDirectory = workingDirectory;
     this.prismaticUrl = prismaticUrl || DEFAULT_PRISMATIC_URL;
-    this.prismPath = this.findPrismPath();
+    this.prismPath = "";
   }
 
   /**
@@ -47,7 +38,7 @@ export class PrismCLIManager {
     if (!workingDirectory) {
       throw new Error("A working directory must be provided.");
     }
-    
+
     const url = prismaticUrl || process.env.PRISMATIC_URL;
     PrismCLIManager.instance = new PrismCLIManager(workingDirectory, url);
     return PrismCLIManager.instance;
@@ -59,7 +50,8 @@ export class PrismCLIManager {
    */
   private async checkCLIInstallation(): Promise<boolean | string> {
     try {
-      await execAsync(`${this.prismPath} --version`);
+      const path = await this.getPrismPath();
+      await execAsync(`${path} --version`);
       return true;
     } catch {
       return false;
@@ -85,6 +77,8 @@ export class PrismCLIManager {
       );
     }
 
+    const path = await this.getPrismPath();
+
     try {
       const execOptions: any = {
         cwd: customCwd || this.workingDirectory,
@@ -94,8 +88,7 @@ export class PrismCLIManager {
         },
       };
 
-      const { stdout, stderr } = await execAsync(`${this.prismPath} ${command}`, execOptions);
-
+      const { stdout, stderr } = await execAsync(`${path} ${command}`, execOptions);
       return { stdout: stdout.toString(), stderr: stderr.toString() };
     } catch (error) {
       throw new Error(
@@ -169,29 +162,17 @@ export class PrismCLIManager {
    * Finds the path to the Prismatic CLI.
    * @returns {string} The path to the Prismatic CLI
    */
-  private findPrismPath(): string {
-    // Check if custom path is set via environment variable
-    if (process.env.PRISM_PATH && existsSync(process.env.PRISM_PATH)) {
-      return process.env.PRISM_PATH;
+  public async getPrismPath(): Promise<string> {
+    if (this.prismPath) {
+      return this.prismPath;
     }
 
-    // Otherwise use local node_modules installation
-    const localBin = path.join(
-      __dirname,
-      "..",
-      "node_modules",
-      "@prismatic-io",
-      "prism",
-      "lib",
-      "run.js",
-    );
-
-    if (existsSync(localBin)) {
-      return localBin;
+    const foundPath = await findPrismPath();
+    if (foundPath) {
+      this.prismPath = foundPath;
+      return foundPath;
     }
 
-    throw new Error(
-      "Prismatic CLI not found. Please ensure @prismatic-io/prism is installed or set PRISM_PATH environment variable.",
-    );
+    throw new Error("Prismatic CLI not found. Please ensure @prismatic-io/prism is installed.");
   }
 }
