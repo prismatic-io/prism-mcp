@@ -41,15 +41,35 @@ function registerGeneralTools() {
   server.tool(
     "prism_components_list",
     "List all components available in your organization",
-    {},
-    async () => {
+    {
+      search: z.string().optional(),
+    },
+    async ({ search }) => {
       try {
         const manager = PrismCLIManager.getInstance();
-        const command = buildCommand("components:list", {
+        const fallbackCommand = buildCommand("components:list", {
           output: "json",
         });
-        const { stdout } = await manager.executeCommand(command);
-        return formatToolResult(stdout, "components");
+
+        // If search parameter is provided, try with --search flag first
+        if (search) {
+          try {
+            const command = buildCommand("components:list", {
+              output: "json",
+              search,
+            });
+            const { stdout } = await manager.executeCommand(command);
+            return formatToolResult(stdout, "components");
+          } catch (searchError) {
+            // If --search flag is not supported, fall back to command without it
+            const { stdout } = await manager.executeCommand(fallbackCommand);
+            return formatToolResult(stdout, "components");
+          }
+        } else {
+          // No search parameter provided, use regular command
+          const { stdout } = await manager.executeCommand(fallbackCommand);
+          return formatToolResult(stdout, "components");
+        }
       } catch (error) {
         throw new Error(`Failed to list components: ${(error as Error).message}`);
       }
@@ -83,16 +103,23 @@ function registerIntegrationTools() {
         .string()
         .min(1)
         .regex(/^[a-zA-Z0-9_-]+$/, "Name must be alphanumeric with hyphens and underscores only"),
-      directory: z.string().optional(),
     },
-    async ({ name, directory }) => {
+    async ({ name }) => {
       try {
         const manager = PrismCLIManager.getInstance();
-        const command = buildCommand(`integrations:init ${name}`, {
-          directory: directory,
-        });
-        const { stdout } = await manager.executeCommand(command);
-        return formatToolResult(stdout);
+
+        try {
+          // Try with --clean flag first
+          const command = buildCommand(`integrations:init ${name}`, {
+            clean: true,
+          });
+          const { stdout } = await manager.executeCommand(command);
+          return formatToolResult(stdout);
+        } catch (cleanError) {
+          // If --clean flag is not supported, fall back to command without it
+          const { stdout } = await manager.executeCommand(`integrations:init ${name}`);
+          return formatToolResult(stdout);
+        }
       } catch (error) {
         throw new Error(`Failed to initialize integration: ${(error as Error).message}`);
       }
