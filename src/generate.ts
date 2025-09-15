@@ -32,7 +32,11 @@ ${name}: configPage({
 `;
 }
 
-export function generateConfigVar(name: string, dataType: string, description?: string): string {
+export function generateConfigVar(
+  name: string,
+  dataType: string,
+  description?: string
+): string {
   return `
 "${name}": configVar({
   stableKey: "${kebabCase(name)}",
@@ -46,36 +50,40 @@ export function generateConnectionConfigVar(
   name: string,
   componentRef?: { componentKey: string; connectionKey: string },
   directory?: string,
-  forceLegacy?: boolean,
-): string {
+  forceLegacy?: boolean
+): { response: string; type: string } {
   const isComponentRef = componentRef?.componentKey;
+  let response = "";
+  let type = "code";
+
   if (isComponentRef) {
     const connectionPath = `${directory}/src/manifests/${componentRef.componentKey}/connections/`;
     const manifestInSrc = existsSync(connectionPath);
 
     if (manifestInSrc) {
-      return connectionPath;
+      response = connectionPath;
+      type = "path";
     } else if (!forceLegacy) {
       throw new Error(
-        `A component manifest was not found for ${componentRef.componentKey}. Attempt prism_install_component_manifest or prism_install_legacy_component_manifest first.`,
+        `A component manifest was not found for ${componentRef.componentKey}. Attempt prism_install_component_manifest or prism_install_legacy_component_manifest first.`
       );
-    }
-
-    return `
-"${name}": connectionConfigVar({
-  stableKey: "${kebabCase(name)}",
-  dataType: "connection",
-  connection: {
-    component: "${componentRef.componentKey}",
-    key: "${componentRef.connectionKey}",
-    values: {
-      // Fill according to type hinting.
+    } else {
+      response = `
+  "${name}": connectionConfigVar({
+    stableKey: "${kebabCase(name)}",
+    dataType: "connection",
+    connection: {
+      component: "${componentRef.componentKey}",
+      key: "${componentRef.connectionKey}",
+      values: {
+        // Fill according to type hinting.
+      },
     },
-  },
-}),
-`;
+  }),
+  `;
+    }
   } else {
-    return `
+    response = `
 "${name}": connectionConfigVar({
   stableKey: "${kebabCase(name)}",
   dataType: "connection",
@@ -85,6 +93,11 @@ export function generateConnectionConfigVar(
 }),
 `;
   }
+
+  return {
+    response,
+    type,
+  };
 }
 
 export function generateDataSourceConfigVar(
@@ -92,22 +105,25 @@ export function generateDataSourceConfigVar(
   dataType: string,
   componentRef?: { componentKey: string; dataSourceKey: string },
   directory?: string,
-  forceLegacy?: boolean,
-): string {
+  forceLegacy?: boolean
+): { response: string; type: string } {
   const isComponentRef = componentRef?.componentKey;
+  let response = "";
+  let type = "code";
+
   if (isComponentRef) {
     const dataSourcePath = `${directory}/src/manifests/${componentRef.componentKey}/dataSources/`;
     const manifestInSrc = existsSync(dataSourcePath);
 
     if (manifestInSrc) {
-      return dataSourcePath;
+      response = dataSourcePath;
+      type = "path";
     } else if (!forceLegacy) {
       throw new Error(
-        `A component manifest was not found for ${componentRef.componentKey}. Attempt prism_install_component_manifest or prism_install_legacy_component_manifest first.`,
+        `A component manifest was not found for ${componentRef.componentKey}. Attempt prism_install_component_manifest or prism_install_legacy_component_manifest first.`
       );
-    }
-
-    return `
+    } else {
+      response = `
 "${name}": dataSourceConfigVar({
   stableKey: "${kebabCase(name)}",
   dataType: "${dataType}",
@@ -123,8 +139,9 @@ export function generateDataSourceConfigVar(
   },
 }),
 `;
+    }
   } else {
-    return `
+    response = `
 "${name}": dataSourceConfigVar({
   dataSourceType: "${dataType}",
   stableKey: "${kebabCase(name)}",
@@ -134,4 +151,9 @@ export function generateDataSourceConfigVar(
 }),
 `;
   }
+
+  return {
+    response,
+    type,
+  };
 }
