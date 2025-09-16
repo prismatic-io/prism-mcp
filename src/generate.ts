@@ -32,11 +32,7 @@ ${name}: configPage({
 `;
 }
 
-export function generateConfigVar(
-  name: string,
-  dataType: string,
-  description?: string
-): string {
+export function generateConfigVar(name: string, dataType: string, description?: string): string {
   return `
 "${name}": configVar({
   stableKey: "${kebabCase(name)}",
@@ -50,7 +46,7 @@ export function generateConnectionConfigVar(
   name: string,
   componentRef?: { componentKey: string; connectionKey: string },
   directory?: string,
-  forceLegacy?: boolean
+  forceLegacy?: boolean,
 ): { response: string; type: string } {
   const isComponentRef = componentRef?.componentKey;
   let response = "";
@@ -65,7 +61,7 @@ export function generateConnectionConfigVar(
       type = "path";
     } else if (!forceLegacy) {
       throw new Error(
-        `A component manifest was not found for ${componentRef.componentKey}. Attempt prism_install_component_manifest or prism_install_legacy_component_manifest first.`
+        `A component manifest was not found for ${componentRef.componentKey}. Attempt prism_install_component_manifest or prism_install_legacy_component_manifest first.`,
       );
     } else {
       response = `
@@ -105,7 +101,7 @@ export function generateDataSourceConfigVar(
   dataType: string,
   componentRef?: { componentKey: string; dataSourceKey: string },
   directory?: string,
-  forceLegacy?: boolean
+  forceLegacy?: boolean,
 ): { response: string; type: string } {
   const isComponentRef = componentRef?.componentKey;
   let response = "";
@@ -120,7 +116,7 @@ export function generateDataSourceConfigVar(
       type = "path";
     } else if (!forceLegacy) {
       throw new Error(
-        `A component manifest was not found for ${componentRef.componentKey}. Attempt prism_install_component_manifest or prism_install_legacy_component_manifest first.`
+        `A component manifest was not found for ${componentRef.componentKey}. Attempt prism_install_component_manifest or prism_install_legacy_component_manifest first.`,
       );
     } else {
       response = `

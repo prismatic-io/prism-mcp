@@ -5,12 +5,7 @@ import { snakeCase } from "lodash-es";
 import path from "node:path";
 import { z } from "zod";
 
-import {
-  formatToolResult,
-  lookupFlowUrl,
-  buildCommand,
-  execAsync,
-} from "./helpers.js";
+import { formatToolResult, buildCommand, execAsync } from "./helpers.js";
 import { PrismCLIManager } from "./prism-cli-manager.js";
 import {
   generateConfigPage,
@@ -40,7 +35,7 @@ function registerGeneralTools() {
       } catch (error) {
         throw new Error(`Failed to get user info: ${(error as Error).message}`);
       }
-    }
+    },
   );
 
   server.tool(
@@ -55,7 +50,7 @@ function registerGeneralTools() {
           JSON.stringify({
             instruction:
               "Users should build clients using @prismatic-io/spectral's createClient instead of using Prismatic's HTTP component.",
-          })
+          }),
         );
       }
 
@@ -78,7 +73,7 @@ function registerGeneralTools() {
                 stdout,
                 instruction:
                   "If the desired component is not found, build a client using @prismatic-io/spectral's createClient.",
-              })
+              }),
             );
           } catch (searchError) {
             // If --search flag is not supported, fall back to command without it
@@ -88,7 +83,7 @@ function registerGeneralTools() {
                 stdout,
                 instruction:
                   "If the desired component is not found, build a client using @prismatic-io/spectral's createClient.",
-              })
+              }),
             );
           }
         } else {
@@ -97,11 +92,9 @@ function registerGeneralTools() {
           return formatToolResult(stdout, "components");
         }
       } catch (error) {
-        throw new Error(
-          `Failed to list components: ${(error as Error).message}`
-        );
+        throw new Error(`Failed to list components: ${(error as Error).message}`);
       }
-    }
+    },
   );
 }
 
@@ -109,21 +102,39 @@ function registerIntegrationTools() {
   server.tool(
     "prism_integrations_list",
     "List all integrations in your organization",
-    {},
-    async () => {
+    {
+      search: z.string().optional(),
+    },
+    async ({ search }) => {
+      const baseParams = { output: "json", extended: true };
       try {
         const manager = PrismCLIManager.getInstance();
-        const command = buildCommand("integrations:list", {
-          output: "json",
-        });
-        const { stdout } = await manager.executeCommand(command);
-        return formatToolResult(stdout, "integrations");
+
+        // If search parameter is provided, try with --search flag first
+        if (search) {
+          try {
+            const command = buildCommand("integrations:list", {
+              ...baseParams,
+              search,
+            });
+            const { stdout } = await manager.executeCommand(command);
+            return formatToolResult(stdout, "integration");
+          } catch (searchError) {
+            // If --search flag is not supported, fall back to command without it
+            const command = buildCommand("integrations:list", baseParams);
+            const { stdout } = await manager.executeCommand(command);
+            return formatToolResult(stdout, "integration");
+          }
+        } else {
+          // No search parameter provided, use regular command
+          const command = buildCommand("integrations:list", baseParams);
+          const { stdout } = await manager.executeCommand(command);
+          return formatToolResult(stdout, "integration");
+        }
       } catch (error) {
-        throw new Error(
-          `Failed to list integrations: ${(error as Error).message}`
-        );
+        throw new Error(`Failed to list integrations: ${(error as Error).message}`);
       }
-    }
+    },
   );
   server.tool(
     "prism_integrations_init",
@@ -132,10 +143,7 @@ function registerIntegrationTools() {
       name: z
         .string()
         .min(1)
-        .regex(
-          /^[a-zA-Z0-9_-]+$/,
-          "Name must be alphanumeric with hyphens and underscores only"
-        ),
+        .regex(/^[a-zA-Z0-9_-]+$/, "Name must be alphanumeric with hyphens and underscores only"),
     },
     async ({ name }) => {
       try {
@@ -150,17 +158,13 @@ function registerIntegrationTools() {
           return formatToolResult(stdout);
         } catch (cleanError) {
           // If --clean flag is not supported, fall back to command without it
-          const { stdout } = await manager.executeCommand(
-            `integrations:init ${name}`
-          );
+          const { stdout } = await manager.executeCommand(`integrations:init ${name}`);
           return formatToolResult(stdout);
         }
       } catch (error) {
-        throw new Error(
-          `Failed to initialize integration: ${(error as Error).message}`
-        );
+        throw new Error(`Failed to initialize integration: ${(error as Error).message}`);
       }
-    }
+    },
   );
 
   server.tool(
@@ -182,11 +186,9 @@ function registerIntegrationTools() {
         const { stdout } = await manager.executeCommand(command);
         return formatToolResult(stdout);
       } catch (error) {
-        throw new Error(
-          `Failed to convert integration: ${(error as Error).message}`
-        );
+        throw new Error(`Failed to convert integration: ${(error as Error).message}`);
       }
-    }
+    },
   );
 
   server.tool(
@@ -196,14 +198,11 @@ function registerIntegrationTools() {
     async ({ integrationId, columns }) => {
       try {
         const manager = PrismCLIManager.getInstance();
-        const command = buildCommand(
-          `integrations:flows:list "${integrationId}"`,
-          {
-            extended: true,
-            columns,
-            output: "json",
-          }
-        );
+        const command = buildCommand(`integrations:flows:list "${integrationId}"`, {
+          extended: true,
+          columns,
+          output: "json",
+        });
 
         const { stdout } = await manager.executeCommand(command);
 
@@ -211,68 +210,50 @@ function registerIntegrationTools() {
       } catch (error) {
         throw new Error(`Failed to list flows: ${(error as Error).message}`);
       }
-    }
+    },
   );
 
   server.tool(
     "prism_integrations_flows_test",
     "Test a flow in a Prismatic integration",
     {
-      flowUrl: z.string().optional(),
-      flowId: z.string().optional(),
-      flowName: z.string().optional(),
-      integrationId: z.string().optional(),
-      payload: z.string().optional(),
+      flowWebhookTestUrl: z.string().optional(),
+      filepathToTestPayload: z.string().optional(),
       payloadContentType: z.string().optional(),
       sync: z.boolean().optional(),
       tailLogs: z.boolean().optional(),
       tailResults: z.boolean().optional(),
       timeout: z.number().positive().optional().describe("In seconds"),
-      resultFile: z.string().optional(),
+      filepathToStoreResult: z.string().optional(),
     },
     async ({
-      flowUrl,
-      flowId,
-      flowName,
-      integrationId,
-      payload,
+      flowWebhookTestUrl,
+      filepathToTestPayload,
       payloadContentType,
       sync,
       tailLogs,
       tailResults,
       timeout,
-      resultFile,
+      filepathToStoreResult,
     }) => {
       try {
-        let testUrl = flowUrl;
-
         if ((tailLogs || tailResults) && !timeout) {
           throw new Error(
-            "If tailing logs or step results via MCP server, a timeout (in seconds) is required."
+            "If tailing logs or step results via MCP server, a timeout (in seconds) is required.",
           );
-        }
-
-        // If no direct URL provided, we need to look it up
-        if (!testUrl) {
-          if (!integrationId) {
-            throw new Error(
-              "integrationId is required when flowUrl is not provided"
-            );
-          }
-          testUrl = await lookupFlowUrl(integrationId, flowId, flowName);
         }
 
         // Build the test command
         const manager = PrismCLIManager.getInstance();
         const command = buildCommand("integrations:flows:test", {
-          "flow-url": flowUrl,
-          payload,
+          "flow-url": flowWebhookTestUrl,
+          payload: filepathToTestPayload,
           "payload-content-type": payloadContentType,
           sync,
           "tail-logs": tailLogs,
           "tail-results": tailResults,
           timeout,
-          "result-file": resultFile,
+          "result-file": filepathToStoreResult,
           jsonl: true,
           quiet: true,
         });
@@ -282,7 +263,7 @@ function registerIntegrationTools() {
       } catch (error) {
         throw new Error(`Failed to test flow: ${(error as Error).message}`);
       }
-    }
+    },
   );
 
   server.tool(
@@ -294,21 +275,17 @@ function registerIntegrationTools() {
       path: z
         .string()
         .optional()
-        .describe(
-          "Path to the YAML definition of an integration to import. Not applicable to CNI"
-        ),
+        .describe("Path to the YAML definition of an integration to import. Not applicable to CNI"),
       replace: z
         .boolean()
         .optional()
         .describe(
-          "Allows replacing an existing integration regardless of code-native status. Requires integrationId."
+          "Allows replacing an existing integration regardless of code-native status. Requires integrationId.",
         ),
       iconPath: z
         .string()
         .optional()
-        .describe(
-          "Path to the PNG icon for the integration. Not applicable for CNI."
-        ),
+        .describe("Path to the PNG icon for the integration. Not applicable for CNI."),
     },
     async ({ directory, integrationId, path, replace, iconPath }) => {
       try {
@@ -332,11 +309,9 @@ function registerIntegrationTools() {
         const { stdout } = await manager.executeCommand(command, directory);
         return formatToolResult(stdout);
       } catch (error) {
-        throw new Error(
-          `Failed to import integration: ${(error as Error).message}`
-        );
+        throw new Error(`Failed to import integration: ${(error as Error).message}`);
       }
-    }
+    },
   );
 
   server.tool(
@@ -361,14 +336,12 @@ function registerIntegrationTools() {
             stdout: result.stdout,
             instruction:
               "The AI agent should update the componentRegistry file after installation.",
-          })
+          }),
         );
       } catch (error) {
-        throw new Error(
-          `Failed to generate boilerplate: ${(error as Error).message}.`
-        );
+        throw new Error(`Failed to generate boilerplate: ${(error as Error).message}.`);
       }
-    }
+    },
   );
 
   // NOTE: May be deprecated soon.
@@ -385,14 +358,12 @@ function registerIntegrationTools() {
             code: `"@component-manifests/${snakeCase(componentKey)}": "*"`,
             instruction:
               "The AI agent should update the componentRegistry file after installation.",
-          })
+          }),
         );
       } catch (error) {
-        throw new Error(
-          `Failed to generate boilerplate: ${(error as Error).message}`
-        );
+        throw new Error(`Failed to generate boilerplate: ${(error as Error).message}`);
       }
-    }
+    },
   );
 
   server.tool(
@@ -406,11 +377,9 @@ function registerIntegrationTools() {
         const result = JSON.stringify({ code: generateFlowFile(name) });
         return formatToolResult(result);
       } catch (error) {
-        throw new Error(
-          `Failed to create flow boilerplate code: ${(error as Error).message}`
-        );
+        throw new Error(`Failed to create flow boilerplate code: ${(error as Error).message}`);
       }
-    }
+    },
   );
 
   server.tool(
@@ -425,12 +394,10 @@ function registerIntegrationTools() {
         return formatToolResult(result);
       } catch (error) {
         throw new Error(
-          `Failed to create config page boilerplate code: ${
-            (error as Error).message
-          }`
+          `Failed to create config page boilerplate code: ${(error as Error).message}`,
         );
       }
-    }
+    },
   );
 
   server.tool(
@@ -448,12 +415,10 @@ function registerIntegrationTools() {
         return formatToolResult(result);
       } catch (error) {
         throw new Error(
-          `Failed to create config var boilerplate code: ${
-            (error as Error).message
-          }`
+          `Failed to create config var boilerplate code: ${(error as Error).message}`,
         );
       }
-    }
+    },
   );
 
   server.tool(
@@ -477,7 +442,7 @@ function registerIntegrationTools() {
           name,
           componentRef,
           directory || manager.getWorkingDirectory(),
-          forceLegacy
+          forceLegacy,
         );
 
         if (generatedConnection.type === "path") {
@@ -486,18 +451,16 @@ function registerIntegrationTools() {
               path: generatedConnection.response,
               instruction:
                 "The file at this path contains a wrapper function that can be used to define a Prismatic connection. The AI agent should use this function in an integration's config page.",
-            })
+            }),
           );
         }
         return formatToolResult(generatedConnection.response);
       } catch (error) {
         throw new Error(
-          `Failed to create connection config var boilerplate code: ${
-            (error as Error).message
-          }`
+          `Failed to create connection config var boilerplate code: ${(error as Error).message}`,
         );
       }
-    }
+    },
   );
 
   server.tool(
@@ -523,7 +486,7 @@ function registerIntegrationTools() {
           dataType,
           componentRef,
           directory || manager.getWorkingDirectory(),
-          forceLegacy
+          forceLegacy,
         );
 
         if (generatedDataSource.type === "path") {
@@ -532,19 +495,17 @@ function registerIntegrationTools() {
               path: generatedDataSource.response,
               instruction:
                 "The file at this path contains a wrapper function that can be used to define a Prismatic data source. The AI agent should use this function in an integration's config page.",
-            })
+            }),
           );
         }
 
         return formatToolResult(generatedDataSource.response);
       } catch (error) {
         throw new Error(
-          `Failed to create connection config var boilerplate code: ${
-            (error as Error).message
-          }`
+          `Failed to create connection config var boilerplate code: ${(error as Error).message}`,
         );
       }
-    }
+    },
   );
 }
 
@@ -567,11 +528,9 @@ function registerComponentTools() {
         const { stdout } = await manager.executeCommand(command);
         return formatToolResult(stdout);
       } catch (error) {
-        throw new Error(
-          `Failed to initialize component: ${(error as Error).message}`
-        );
+        throw new Error(`Failed to initialize component: ${(error as Error).message}`);
       }
-    }
+    },
   );
 
   server.tool(
@@ -621,11 +580,9 @@ function registerComponentTools() {
         const { stdout } = await manager.executeCommand(command, directory);
         return formatToolResult(stdout);
       } catch (error) {
-        throw new Error(
-          `Failed to publish component: ${(error as Error).message}`
-        );
+        throw new Error(`Failed to publish component: ${(error as Error).message}`);
       }
-    }
+    },
   );
 
   server.tool(
@@ -640,25 +597,14 @@ function registerComponentTools() {
       version: z.string().optional(),
       name: z.string().optional(),
     },
-    async ({
-      componentDir,
-      outputDir,
-      registry,
-      dryRun,
-      skipSignatureVerify,
-      version,
-      name,
-    }) => {
+    async ({ componentDir, outputDir, registry, dryRun, skipSignatureVerify, version, name }) => {
       try {
         // Build the component before attempting to generate the manifest
         await execAsync("npm run build", { cwd: componentDir });
 
         const command = buildCommand("component-manifest", {
           "output-dir": outputDir
-            ? path.join(
-                outputDir,
-                `${path.basename(componentDir) || name}-manifest`
-              )
+            ? path.join(outputDir, `${path.basename(componentDir) || name}-manifest`)
             : "",
           registry,
           "dry-run": dryRun,
@@ -670,24 +616,20 @@ function registerComponentTools() {
         const { stdout } = await execAsync(command, { cwd: componentDir });
         return formatToolResult(stdout);
       } catch (error) {
-        throw new Error(
-          `Failed to generate component manifest: ${(error as Error).message}`
-        );
+        throw new Error(`Failed to generate component manifest: ${(error as Error).message}`);
       }
-    }
+    },
   );
 }
 
 function registerTools(toolsets: string[] = []) {
   if (toolsets && toolsets.length > 0) {
-    const invalidToolsets = toolsets.filter(
-      (toolset) => !VALID_TOOLSETS.includes(toolset)
-    );
+    const invalidToolsets = toolsets.filter((toolset) => !VALID_TOOLSETS.includes(toolset));
     if (invalidToolsets.length > 0) {
       throw Error(
         `Invalid toolset: ${invalidToolsets.join(
-          ", "
-        )}. Valid categories are: ${VALID_TOOLSETS.join(", ")}`
+          ", ",
+        )}. Valid categories are: ${VALID_TOOLSETS.join(", ")}`,
       );
     }
   }
@@ -737,7 +679,7 @@ async function main() {
   } catch (error) {
     console.error(
       "Error: Failed to start Prism MCP server:",
-      error instanceof Error ? error.message : String(error)
+      error instanceof Error ? error.message : String(error),
     );
     process.exit(1);
   }

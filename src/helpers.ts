@@ -1,6 +1,5 @@
 import { exec } from "node:child_process";
 import { findExecutablePath } from "./findExecutablePath.js";
-import { PrismCLIManager } from "./prism-cli-manager.js";
 import { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
 import { promisify } from "node:util";
 
@@ -31,43 +30,6 @@ export function formatToolResult(stdout: string, dataKey?: string): CallToolResu
       ],
     };
   }
-}
-
-/**
- * Look up flow URL by ID or name
- */
-export async function lookupFlowUrl(
-  integrationId: string,
-  flowId?: string,
-  flowName?: string,
-): Promise<string> {
-  if (!flowId && !flowName) {
-    throw new Error("Either a flow ID or flow name must be provided");
-  }
-
-  const manager = PrismCLIManager.getInstance();
-  const listCommand = buildCommand(`integrations:flows:list "${integrationId}"`, {
-    extended: true,
-    output: "json",
-  });
-  const { stdout: flowsJson } = await manager.executeCommand(listCommand);
-  const flows = JSON.parse(flowsJson);
-
-  const flow = flows.find(
-    (f: { id: string; name: string; url?: string }) =>
-      (flowId && f.id === flowId) || (flowName && f.name === flowName),
-  );
-
-  if (!flow) {
-    throw new Error(`Flow not found with ${flowId ? `ID: ${flowId}` : `name: ${flowName}`}`);
-  }
-
-  const flowUrl = flow.webhookUrl || flow.url;
-  if (!flowUrl) {
-    throw new Error("Flow does not have a webhook URL");
-  }
-
-  return flowUrl;
 }
 
 /**
