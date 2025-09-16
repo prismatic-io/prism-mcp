@@ -5,7 +5,7 @@ import { snakeCase } from "lodash-es";
 import path from "node:path";
 import { z } from "zod";
 
-import { formatToolResult, lookupFlowUrl, buildCommand, execAsync } from "./helpers.js";
+import { formatToolResult, buildCommand, execAsync } from "./helpers.js";
 import { PrismCLIManager } from "./prism-cli-manager.js";
 import {
   generateConfigPage,
@@ -41,15 +41,56 @@ function registerGeneralTools() {
   server.tool(
     "prism_components_list",
     "List all components available in your organization",
-    {},
-    async () => {
+    {
+      search: z.string().optional(),
+    },
+    async ({ search }) => {
+      if (search === "http") {
+        return formatToolResult(
+          JSON.stringify({
+            instruction:
+              "Users should build clients using @prismatic-io/spectral's createClient instead of using Prismatic's HTTP component.",
+          }),
+        );
+      }
+
       try {
         const manager = PrismCLIManager.getInstance();
-        const command = buildCommand("components:list", {
+        const fallbackCommand = buildCommand("components:list", {
           output: "json",
         });
-        const { stdout } = await manager.executeCommand(command);
-        return formatToolResult(stdout, "components");
+
+        // If search parameter is provided, try with --search flag first
+        if (search) {
+          try {
+            const command = buildCommand("components:list", {
+              output: "json",
+              search,
+            });
+            const { stdout } = await manager.executeCommand(command);
+            return formatToolResult(
+              JSON.stringify({
+                stdout,
+                instruction:
+                  "If the desired component is not found, build a client using @prismatic-io/spectral's createClient.",
+              }),
+            );
+          } catch (searchError) {
+            // If --search flag is not supported, fall back to command without it
+            const { stdout } = await manager.executeCommand(fallbackCommand);
+            return formatToolResult(
+              JSON.stringify({
+                stdout,
+                instruction:
+                  "If the desired component is not found, build a client using @prismatic-io/spectral's createClient.",
+              }),
+            );
+          }
+        } else {
+          // No search parameter provided, use regular command
+          const { stdout } = await manager.executeCommand(fallbackCommand);
+          return formatToolResult(stdout, "components");
+        }
       } catch (error) {
         throw new Error(`Failed to list components: ${(error as Error).message}`);
       }
@@ -61,15 +102,35 @@ function registerIntegrationTools() {
   server.tool(
     "prism_integrations_list",
     "List all integrations in your organization",
-    {},
-    async () => {
+    {
+      search: z.string().optional(),
+    },
+    async ({ search }) => {
+      const baseParams = { output: "json", extended: true };
       try {
         const manager = PrismCLIManager.getInstance();
-        const command = buildCommand("integrations:list", {
-          output: "json",
-        });
-        const { stdout } = await manager.executeCommand(command);
-        return formatToolResult(stdout, "integrations");
+
+        // If search parameter is provided, try with --search flag first
+        if (search) {
+          try {
+            const command = buildCommand("integrations:list", {
+              ...baseParams,
+              search,
+            });
+            const { stdout } = await manager.executeCommand(command);
+            return formatToolResult(stdout, "integration");
+          } catch (searchError) {
+            // If --search flag is not supported, fall back to command without it
+            const command = buildCommand("integrations:list", baseParams);
+            const { stdout } = await manager.executeCommand(command);
+            return formatToolResult(stdout, "integration");
+          }
+        } else {
+          // No search parameter provided, use regular command
+          const command = buildCommand("integrations:list", baseParams);
+          const { stdout } = await manager.executeCommand(command);
+          return formatToolResult(stdout, "integration");
+        }
       } catch (error) {
         throw new Error(`Failed to list integrations: ${(error as Error).message}`);
       }
@@ -83,16 +144,23 @@ function registerIntegrationTools() {
         .string()
         .min(1)
         .regex(/^[a-zA-Z0-9_-]+$/, "Name must be alphanumeric with hyphens and underscores only"),
-      directory: z.string().optional(),
     },
-    async ({ name, directory }) => {
+    async ({ name }) => {
       try {
         const manager = PrismCLIManager.getInstance();
-        const command = buildCommand(`integrations:init ${name}`, {
-          directory: directory,
-        });
-        const { stdout } = await manager.executeCommand(command);
-        return formatToolResult(stdout);
+
+        try {
+          // Try with --clean flag first
+          const command = buildCommand(`integrations:init ${name}`, {
+            clean: true,
+          });
+          const { stdout } = await manager.executeCommand(command);
+          return formatToolResult(stdout);
+        } catch (cleanError) {
+          // If --clean flag is not supported, fall back to command without it
+          const { stdout } = await manager.executeCommand(`integrations:init ${name}`);
+          return formatToolResult(stdout);
+        }
       } catch (error) {
         throw new Error(`Failed to initialize integration: ${(error as Error).message}`);
       }
@@ -149,59 +217,43 @@ function registerIntegrationTools() {
     "prism_integrations_flows_test",
     "Test a flow in a Prismatic integration",
     {
-      flowUrl: z.string().optional(),
-      flowId: z.string().optional(),
-      flowName: z.string().optional(),
-      integrationId: z.string().optional(),
-      payload: z.string().optional(),
+      flowWebhookTestUrl: z.string().optional(),
+      filepathToTestPayload: z.string().optional(),
       payloadContentType: z.string().optional(),
       sync: z.boolean().optional(),
       tailLogs: z.boolean().optional(),
       tailResults: z.boolean().optional(),
       timeout: z.number().positive().optional().describe("In seconds"),
-      resultFile: z.string().optional(),
+      filepathToStoreResult: z.string().optional(),
     },
     async ({
-      flowUrl,
-      flowId,
-      flowName,
-      integrationId,
-      payload,
+      flowWebhookTestUrl,
+      filepathToTestPayload,
       payloadContentType,
       sync,
       tailLogs,
       tailResults,
       timeout,
-      resultFile,
+      filepathToStoreResult,
     }) => {
       try {
-        let testUrl = flowUrl;
-
         if ((tailLogs || tailResults) && !timeout) {
           throw new Error(
             "If tailing logs or step results via MCP server, a timeout (in seconds) is required.",
           );
         }
 
-        // If no direct URL provided, we need to look it up
-        if (!testUrl) {
-          if (!integrationId) {
-            throw new Error("integrationId is required when flowUrl is not provided");
-          }
-          testUrl = await lookupFlowUrl(integrationId, flowId, flowName);
-        }
-
         // Build the test command
         const manager = PrismCLIManager.getInstance();
         const command = buildCommand("integrations:flows:test", {
-          "flow-url": flowUrl,
-          payload,
+          "flow-url": flowWebhookTestUrl,
+          payload: filepathToTestPayload,
           "payload-content-type": payloadContentType,
           sync,
           "tail-logs": tailLogs,
           "tail-results": tailResults,
           timeout,
-          "result-file": resultFile,
+          "result-file": filepathToStoreResult,
           jsonl: true,
           quiet: true,
         });
@@ -371,7 +423,7 @@ function registerIntegrationTools() {
 
   server.tool(
     "prism_integrations_add_connection_config_var",
-    "Returns the path to a file that contains a connection wrapper function. If not available, generates boilerplate code for a connection config variable. Results should be included in a CNI's existing config page.",
+    "Returns the path to a file that contains a connection wrapper function. If not available, generates boilerplate code for a connection config variable.",
     {
       name: z.string(),
       componentRef: z
@@ -386,15 +438,23 @@ function registerIntegrationTools() {
     async ({ name, componentRef, directory, forceLegacy }) => {
       try {
         const manager = PrismCLIManager.getInstance();
-        const result = JSON.stringify({
-          code: generateConnectionConfigVar(
-            name,
-            componentRef,
-            directory || manager.getWorkingDirectory(),
-            forceLegacy,
-          ),
-        });
-        return formatToolResult(result);
+        const generatedConnection = generateConnectionConfigVar(
+          name,
+          componentRef,
+          directory || manager.getWorkingDirectory(),
+          forceLegacy,
+        );
+
+        if (generatedConnection.type === "path") {
+          return formatToolResult(
+            JSON.stringify({
+              path: generatedConnection.response,
+              instruction:
+                "The file at this path contains a wrapper function that can be used to define a Prismatic connection. The AI agent should use this function in an integration's config page.",
+            }),
+          );
+        }
+        return formatToolResult(generatedConnection.response);
       } catch (error) {
         throw new Error(
           `Failed to create connection config var boilerplate code: ${(error as Error).message}`,
@@ -405,7 +465,7 @@ function registerIntegrationTools() {
 
   server.tool(
     "prism_integrations_add_datasource_config_var",
-    "Returns the path to a file to fine a connection wrapper function. If not available, generate boilerplate code for a datasource config variable. The result should be included in a CNI's existing config page.",
+    "Returns the path to a file containing a connection wrapper function. If not available, generate boilerplate code for a datasource config variable.",
     {
       name: z.string(),
       dataType: z.string(),
@@ -421,16 +481,25 @@ function registerIntegrationTools() {
     async ({ name, dataType, componentRef, directory, forceLegacy }) => {
       try {
         const manager = PrismCLIManager.getInstance();
-        const result = JSON.stringify({
-          code: generateDataSourceConfigVar(
-            name,
-            dataType,
-            componentRef,
-            directory || manager.getWorkingDirectory(),
-            forceLegacy,
-          ),
-        });
-        return formatToolResult(result);
+        const generatedDataSource = generateDataSourceConfigVar(
+          name,
+          dataType,
+          componentRef,
+          directory || manager.getWorkingDirectory(),
+          forceLegacy,
+        );
+
+        if (generatedDataSource.type === "path") {
+          return formatToolResult(
+            JSON.stringify({
+              path: generatedDataSource.response,
+              instruction:
+                "The file at this path contains a wrapper function that can be used to define a Prismatic data source. The AI agent should use this function in an integration's config page.",
+            }),
+          );
+        }
+
+        return formatToolResult(generatedDataSource.response);
       } catch (error) {
         throw new Error(
           `Failed to create connection config var boilerplate code: ${(error as Error).message}`,
