@@ -465,7 +465,7 @@ function registerIntegrationTools() {
 
   server.tool(
     "prism_integrations_add_datasource_config_var",
-    "Returns the path to a file to fine a connection wrapper function. If not available, generate boilerplate code for a datasource config variable.",
+    "Returns the path to a file containing a connection wrapper function. If not available, generate boilerplate code for a datasource config variable.",
     {
       name: z.string(),
       dataType: z.string(),
