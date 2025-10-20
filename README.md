@@ -70,7 +70,7 @@ If no `TOOLSETS` environment variable is set, all tools are registered by defaul
 
 ## Usage
 
-### Config
+### Configuration
 
 Configuration location and methods vary slightly depending on the AI tool you are using, but the following is relatively standard. More specific instructions are below.
 
@@ -82,39 +82,63 @@ Example setup:
     "prism": {
       "type": "stdio",
       "command": "npx",
-      "args": [
-        "-y",
-        "@prismatic-io/prism-mcp",
-        "/path/to/the/work/dir/"
-      ],
-      "env": {}
+      "args": ["-y", "@prismatic-io/prism-mcp", "."],
+      "env": {
+        "PRISMATIC_URL": "https://app.prismatic.io"
+      }
     }
   }
 }
 ```
 
-Replace the path args as needed.
+If you would like the MCP server to run in a different directory than the currently open workspace, replace the `.` path argument with your working directory,
+
+```json
+{
+  "args": ["-y", "@prismatic-io/prism-mcp", "/path/to/code-native/integration"]
+}
+```
 
 Command-line arguments:
 
-- First argument: **Required.** Working directory path that determines where Prism CLI commands are run from.
-- Remaining arguments: **Optional.** Toolsets to enable (`integration`, `component`). If no toolsets are specified, all tools are registered by default. Being selective about toolsets may improve performance.
+- First argument: **Required.** Working directory path that determines where Prism CLI commands are run from. Most coding agents (like Cursor and Claude Code) will interpret `.` as the current workspace directory. If your coding agent does not support this, you can specify an absolute path of your code-native integration or custom component project instead.
+- Remaining arguments: **Optional.** Toolsets to enable (`integration`, `component`). If no toolsets are specified, all tools are registered by default. Being selective about toolsets may improve performance. For example, to enable only integration-related tools:
+
+  ```json
+  {
+    "args": ["-y", "@prismatic-io/prism-mcp", ".", "integration"]
+  }
+  ```
 
 Optional environment variable options:
 
-- `PRISMATIC_URL`: `https://app.prismatic.io` by default.
+- `PRISMATIC_URL`: `https://app.prismatic.io` by default. If your Prismatic tenant is hosted in a different region, or if you use a private stack deployment, set this variable to your Prismatic URL.
 
-### With Claude Desktop or Claude Code
+### Installing with Claude Desktop
 
-To use this MCP server with Claude Code, add the above config to your working directory's `.mcp.json` configuration file. For Claude Desktop, you'll add this to your `claude_desktop_config.json` file.
+Add the above JSON config to your `claude_desktop_config.json` file.
 
-### With Cursor
+### Installing with Claude Code
+
+To use this MCP server with Claude code, add the above config to your working directory's `.mcp.json` configuration file.
+
+Alternatively, run
+
+```bash
+claude mcp add-json prism '{"type":"stdio","command":"npx","args":["-y","@prismatic-io/prism-mcp","."],"env":{"PRISMATIC_URL":"https://app.prismatic.io"}}'
+```
+
+### Installing with Cursor
 
 You can configure available MCP Servers via `Cursor Settings` > `MCP Tools`, then add the above config to your `mcp.json` file.
 
-### With VS Code / GitHub Copilot
+Or, click this link to install automatically: [Add MCP Server to Cursor](cursor://anysphere.cursor-deeplink/mcp/install?name=prism&config=ewogICJ0eXBlIjogInN0ZGlvIiwKICAiY29tbWFuZCI6ICJucHgiLAogICJhcmdzIjogWwogICAgIkBwcmlzbWF0aWMtaW8vcHJpc20tbWNwIiwKICAgICIuIgogIF0sCiAgImVudiI6IHsKICAgICJQUklTTUFUSUNfVVJMIjogImh0dHBzOi8vYXBwLnByaXNtYXRpYy5pbyIKICB9Cn0%3D)
+
+### Installing with VS Code / GitHub Copilot
 
 Add the above config to the `.vscode/mcp.json` in your workspace, or the global `mcp.json` file (accessible via the "Add MCP Server..." option in the Command Palette).
+
+Or, click this link to install automatically: [Add MCP Server to VS Code](vscode:mcp/install?%7B%22name%22%3A%22prism%22%2C%22type%22%3A%22stdio%22%2C%22command%22%3A%22npx%22%2C%22args%22%3A%5B%22%40prismatic-io%2Fprism-mcp%22%2C%22.%22%5D%2C%22env%22%3A%7B%22PRISMATIC_URL%22%3A%22https%3A%2F%2Fapp.prismatic.io%22%7D%7D)
 
 ### Other tools
 
