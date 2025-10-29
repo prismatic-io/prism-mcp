@@ -47,13 +47,13 @@ This MCP server provides several tools, organized into categories. You may regis
 
 ### Toolset Configuration
 
-Tools are organized into **toolsets** that can be selectively enabled via the `TOOLSETS` environment variable:
+Tools are organized into **toolsets** that can be selectively enabled via command-line arguments:
 
 - **`integration`** - Enables all integration-related tools
 - **`component`** - Enables all component-related tools
 - **General tools** are always available regardless of toolset configuration
 
-If no `TOOLSETS` environment variable is set, all tools are registered by default.
+If no toolset arguments are provided, all tools are registered by default.
 
 ## Prerequisites
 
@@ -102,7 +102,9 @@ If you would like the MCP server to run in a different directory than the curren
 Command-line arguments:
 
 - First argument: **Required.** Working directory path that determines where Prism CLI commands are run from. Most coding agents (like Cursor and Claude Code) will interpret `.` as the current workspace directory. If your coding agent does not support this, you can specify an absolute path of your code-native integration or custom component project instead.
-- Remaining arguments: **Optional.** Toolsets to enable (`integration`, `component`). If no toolsets are specified, all tools are registered by default. Being selective about toolsets may improve performance. For example, to enable only integration-related tools:
+- Remaining arguments:
+  - **Optional.** Toolsets to enable (`integration`, `component`). If no toolsets are specified, all tools are registered by default. Being selective about toolsets may improve performance. For example, to enable only integration-related tools:
+  - **Optional.** `--force-npx`: Force the use of npx fallback instead of searching for installed prism CLI. Useful for testing or when prism CLI lookup fails.
 
   ```json
   {
@@ -113,6 +115,7 @@ Command-line arguments:
 Optional environment variable options:
 
 - `PRISMATIC_URL`: `https://app.prismatic.io` by default. If your Prismatic tenant is hosted in a different region, or if you use a private stack deployment, set this variable to your Prismatic URL.
+- `PRISM_PATH`: Path to a specific prism CLI executable. If set, this path will be used instead of searching for prism in PATH or using npx fallback.
 
 ### Installing with Claude Desktop
 

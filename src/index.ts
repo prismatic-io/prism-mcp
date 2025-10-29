@@ -660,16 +660,23 @@ async function main() {
     // Parse command line arguments
     const args = process.argv.slice(2);
     const workingDirectory = args[0];
-    const toolsetsArg = args.slice(1); // Remaining arguments are toolsets
+
+    // Check for --force-npx flag
+    const forceNpxIndex = args.indexOf("--force-npx");
+    const forceNpx = forceNpxIndex !== -1;
+
+    // Remove --force-npx from args before processing toolsets
+    const cleanArgs = forceNpx ? args.filter((arg, index) => index !== forceNpxIndex) : args;
+    const toolsetsArg = cleanArgs.slice(1); // Remaining arguments are toolsets
 
     if (!workingDirectory) {
       console.error("Error: WORKING_DIRECTORY argument is required");
-      console.error("Usage: prism-mcp <working-directory> [toolsets...]");
+      console.error("Usage: prism-mcp <working-directory> [toolsets...] [--force-npx]");
       process.exit(1);
     }
 
     // Initialize the manager with working directory from command line first
-    PrismCLIManager.getInstance(workingDirectory, process.env.PRISMATIC_URL);
+    PrismCLIManager.getInstance(workingDirectory, process.env.PRISMATIC_URL, forceNpx);
 
     // Then register tools with specified toolsets (or all if none specified)
     registerTools(toolsetsArg);

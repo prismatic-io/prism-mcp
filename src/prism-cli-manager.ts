@@ -8,25 +8,29 @@ export class PrismCLIManager {
   private prismPath: string;
   private prismaticUrl: string;
   private workingDirectory: string;
+  private forceNpx: boolean;
 
   /**
    * Private constructor
    * @param {string} workingDirectory - The working directory for CLI commands
    * @param {string} [prismaticUrl] - The URL to the Prismatic instance
+   * @param {boolean} [forceNpx] - Force use of npx fallback
    */
-  private constructor(workingDirectory: string, prismaticUrl?: string) {
+  private constructor(workingDirectory: string, prismaticUrl?: string, forceNpx?: boolean) {
     this.workingDirectory = workingDirectory;
     this.prismaticUrl = prismaticUrl || DEFAULT_PRISMATIC_URL;
     this.prismPath = "";
+    this.forceNpx = forceNpx || false;
   }
 
   /**
    * Gets the singleton instance of PrismCLIManager.
    * @param {string} [workingDirectory] - The working directory for CLI commands (uses env var if not provided)
    * @param {string} [prismaticUrl] - The URL to the Prismatic instance
+   * @param {boolean} [forceNpx] - Force use of npx fallback
    * @returns {PrismCLIManager} The singleton instance of PrismCLIManager
    */
-  public static getInstance(workingDirectory?: string, prismaticUrl?: string): PrismCLIManager {
+  public static getInstance(workingDirectory?: string, prismaticUrl?: string, forceNpx?: boolean): PrismCLIManager {
     if (PrismCLIManager.instance) {
       if (prismaticUrl) {
         PrismCLIManager.instance.prismaticUrl = prismaticUrl;
@@ -40,21 +44,21 @@ export class PrismCLIManager {
     }
 
     const url = prismaticUrl || process.env.PRISMATIC_URL;
-    PrismCLIManager.instance = new PrismCLIManager(workingDirectory, url);
+    PrismCLIManager.instance = new PrismCLIManager(workingDirectory, url, forceNpx);
     return PrismCLIManager.instance;
   }
 
   /**
    * Checks if the Prismatic CLI is properly installed.
-   * @returns {Promise<boolean>} A promise that resolves to true if CLI is installed, false otherwise
+   * @returns {Promise<boolean | string>} A promise that resolves to true if CLI is installed, or error message if not
    */
   private async checkCLIInstallation(): Promise<boolean | string> {
     try {
       const path = await this.getPrismPath();
       await execAsync(`${path} --version`);
       return true;
-    } catch {
-      return false;
+    } catch (error) {
+      return error instanceof Error ? error.message : String(error);
     }
   }
 
@@ -73,7 +77,7 @@ export class PrismCLIManager {
 
     if (isInstalled !== true) {
       throw new Error(
-        "Prismatic CLI is not properly installed. Please ensure @prismatic-io/prism is installed in your project dependencies.",
+        `Prismatic CLI is not properly installed. Error: ${isInstalled}. Please ensure @prismatic-io/prism is installed in your project dependencies or set PRISM_PATH environment variable.`,
       );
     }
 
@@ -167,7 +171,7 @@ export class PrismCLIManager {
       return this.prismPath;
     }
 
-    const foundPath = await findPrismPath();
+    const foundPath = await findPrismPath(this.forceNpx);
     if (foundPath) {
       this.prismPath = foundPath;
       return foundPath;

@@ -56,9 +56,10 @@ export function buildCommand(baseCommand: string, options: Record<string, any>):
 /**
  * Find prism executable path.
  */
-export async function findPrismPath(): Promise<string | null> {
+export async function findPrismPath(forceNpx: boolean = false): Promise<string | null> {
   return findExecutablePath("prism", {
     npxFallback: "@prismatic-io/prism",
     logPrefix: "findPrismPath",
+    forceNpx,
   });
 }
