@@ -1,6 +1,6 @@
 {
   "name": "@prismatic-io/prism-mcp",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "MCP server that wraps Prismatic's Prism CLI tool",
   "keywords": ["prismatic"],
   "main": "dist/index.js",

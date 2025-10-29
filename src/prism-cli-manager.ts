@@ -46,12 +46,13 @@ export class PrismCLIManager {
 
   /**
    * Checks if the Prismatic CLI is properly installed.
+   * @param {string} [cwd] - Optional working directory for the check
    * @returns {Promise<boolean>} A promise that resolves to true if CLI is installed, false otherwise
    */
-  private async checkCLIInstallation(): Promise<boolean | string> {
+  private async checkCLIInstallation(cwd?: string): Promise<boolean | string> {
     try {
       const path = await this.getPrismPath();
-      await execAsync(`${path} --version`);
+      await execAsync(`${path} --version`, { cwd: cwd || this.workingDirectory });
       return true;
     } catch {
       return false;
@@ -69,7 +70,8 @@ export class PrismCLIManager {
     command: string,
     customCwd?: string,
   ): Promise<{ stdout: string; stderr: string }> {
-    const isInstalled = await this.checkCLIInstallation();
+    const workingDir = customCwd || this.workingDirectory;
+    const isInstalled = await this.checkCLIInstallation(workingDir);
 
     if (isInstalled !== true) {
       throw new Error(
@@ -81,7 +83,7 @@ export class PrismCLIManager {
 
     try {
       const execOptions: any = {
-        cwd: customCwd || this.workingDirectory,
+        cwd: workingDir,
         env: {
           ...process.env,
           PRISMATIC_URL: this.prismaticUrl,
