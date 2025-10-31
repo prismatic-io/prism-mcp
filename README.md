@@ -113,6 +113,7 @@ Command-line arguments:
 Optional environment variable options:
 
 - `PRISMATIC_URL`: `https://app.prismatic.io` by default. If your Prismatic tenant is hosted in a different region, or if you use a private stack deployment, set this variable to your Prismatic URL.
+- `MCP_PRISM_PATH`: Optional. If set, the MCP server will use this specific path to the Prism CLI executable instead of searching for it via `npx` or in your system PATH. This is useful if you have multiple Prism CLI installations or want to use a specific version. If setting this variable, use an absolute path and not a relative one.
 
 ### Installing with Claude Desktop
 
