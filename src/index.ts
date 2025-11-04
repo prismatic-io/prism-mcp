@@ -668,6 +668,9 @@ async function main() {
       process.exit(1);
     }
 
+    // Move agent to the working dir
+    process.chdir(workingDirectory);
+
     // Initialize the manager with working directory from command line first
     PrismCLIManager.getInstance(workingDirectory, process.env.PRISMATIC_URL);
 
@@ -675,7 +678,7 @@ async function main() {
     registerTools(toolsetsArg);
     const transport = new StdioServerTransport();
     await server.connect(transport);
-    console.error("Prism MCP server running");
+    console.error(`Prism MCP server running in ${workingDirectory}`);
   } catch (error) {
     console.error(
       "Error: Failed to start Prism MCP server:",
