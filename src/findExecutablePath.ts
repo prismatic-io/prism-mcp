@@ -50,20 +50,14 @@ export async function findExecutable(
         isNpx: true,
       };
     } catch (error) {
-      console.error(
-        `${logPrefix}: npx package ${npxPackage} not available:`,
-        error,
-      );
+      console.error(`${logPrefix}: npx package ${npxPackage} not available:`, error);
       return null;
     }
   }
 
   // Fallback to which/where for direct executable lookup
   try {
-    const cmd =
-      process.platform === "win32"
-        ? `where ${executable}`
-        : `which ${executable}`;
+    const cmd = process.platform === "win32" ? `where ${executable}` : `which ${executable}`;
 
     const { stdout } = await execAsync(cmd);
 
@@ -82,4 +76,3 @@ export async function findExecutable(
 
   return null;
 }
-

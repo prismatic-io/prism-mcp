@@ -217,7 +217,7 @@ function registerIntegrationTools() {
     "prism_integrations_flows_test",
     "Test a flow in a Prismatic integration",
     {
-      flowWebhookTestUrl: z.string().optional(),
+      flowId: z.string().optional(),
       filepathToTestPayload: z.string().optional(),
       payloadContentType: z.string().optional(),
       sync: z.boolean().optional(),
@@ -227,7 +227,7 @@ function registerIntegrationTools() {
       filepathToStoreResult: z.string().optional(),
     },
     async ({
-      flowWebhookTestUrl,
+      flowId,
       filepathToTestPayload,
       payloadContentType,
       sync,
@@ -246,7 +246,7 @@ function registerIntegrationTools() {
         // Build the test command
         const manager = PrismCLIManager.getInstance();
         const command = buildCommand("integrations:flows:test", {
-          "flow-url": flowWebhookTestUrl,
+          "flow-id": flowId,
           payload: filepathToTestPayload,
           "payload-content-type": payloadContentType,
           sync,
@@ -504,6 +504,35 @@ function registerIntegrationTools() {
         throw new Error(
           `Failed to create connection config var boilerplate code: ${(error as Error).message}`,
         );
+      }
+    },
+  );
+
+  server.tool(
+    "prism_integrations_flows_listen",
+    "Set a flow to 'Listening Mode,' allowing you to capture webhook payloads or polling trigger response and save them as payloads to be used by the integrations:flows:test command. For flows using polling triggers, the user should create the events before invoking this tool. For flows using webhook triggers, the user creates the event while you listen.",
+    {
+      integrationId: z.string(),
+      flowId: z.string().optional(),
+      outputDir: z.string().optional(),
+      timeout: z.number().optional(),
+    },
+    async ({ integrationId, flowId, outputDir, timeout }) => {
+      try {
+        const manager = PrismCLIManager.getInstance();
+        const command = buildCommand("integrations:flows:listen", {
+          "flow-id": flowId,
+          "integration-id": integrationId,
+          timeout: timeout || 300, // 5 minutes
+          output: outputDir,
+          quiet: true,
+          "no-prompt": true,
+        });
+
+        const { stdout } = await manager.executeCommand(command);
+        return formatToolResult(stdout);
+      } catch (error) {
+        throw new Error(`Listening mode failed: ${(error as Error).message}`);
       }
     },
   );
