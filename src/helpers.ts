@@ -67,7 +67,7 @@ export async function findPrismPath(): Promise<string | null> {
   }
 
   if (result.isNpx) {
-    return `${result.command} ${result.args.join(' ')}`;
+    return `${result.command} ${result.args.join(" ")}`;
   }
 
   return result.command;
