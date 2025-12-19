@@ -58,7 +58,7 @@ export function buildCommand(baseCommand: string, options: Record<string, any>):
  */
 export async function findPrismPath(): Promise<string | null> {
   const result = await findExecutable("prism", {
-    npxPackage: "@prismatic-io/prism",
+    npxPackage: "@prismatic-io/prism@latest",
     logPrefix: "findPrismPath",
   });
 

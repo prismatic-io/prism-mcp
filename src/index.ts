@@ -21,6 +21,7 @@ const server = new McpServer({
 });
 
 const VALID_TOOLSETS = ["integration", "component"];
+const DEFAULT_TIMEOUT = 300; // 5 minutes
 
 function registerGeneralTools() {
   server.tool(
@@ -199,7 +200,6 @@ function registerIntegrationTools() {
       try {
         const manager = PrismCLIManager.getInstance();
         const command = buildCommand(`integrations:flows:list "${integrationId}"`, {
-          extended: true,
           columns,
           output: "json",
         });
@@ -217,36 +217,34 @@ function registerIntegrationTools() {
     "prism_integrations_flows_test",
     "Test a flow in a Prismatic integration",
     {
-      flowId: z.string().optional(),
+      flowName: z.string().optional(),
+      integrationId: z.string(),
       filepathToTestPayload: z.string().optional(),
       payloadContentType: z.string().optional(),
       sync: z.boolean().optional(),
       tailLogs: z.boolean().optional(),
       tailResults: z.boolean().optional(),
-      timeout: z.number().positive().optional().describe("In seconds"),
+      timeout: z.number().positive().describe("In seconds").optional(),
       filepathToStoreResult: z.string().optional(),
+      cniAutoEnd: z.boolean().optional(),
     },
     async ({
-      flowId,
+      flowName,
+      integrationId,
       filepathToTestPayload,
       payloadContentType,
       sync,
       tailLogs,
       tailResults,
-      timeout,
+      timeout = DEFAULT_TIMEOUT,
       filepathToStoreResult,
+      cniAutoEnd = true,
     }) => {
       try {
-        if ((tailLogs || tailResults) && !timeout) {
-          throw new Error(
-            "If tailing logs or step results via MCP server, a timeout (in seconds) is required.",
-          );
-        }
-
-        // Build the test command
         const manager = PrismCLIManager.getInstance();
         const command = buildCommand("integrations:flows:test", {
-          "flow-id": flowId,
+          "flow-name": flowName,
+          "integration-id": integrationId,
           payload: filepathToTestPayload,
           "payload-content-type": payloadContentType,
           sync,
@@ -254,8 +252,9 @@ function registerIntegrationTools() {
           "tail-results": tailResults,
           timeout,
           "result-file": filepathToStoreResult,
-          jsonl: true,
+          jsonl: tailLogs || tailResults,
           quiet: true,
+          "cni-auto-end": cniAutoEnd,
         });
 
         const { stdout } = await manager.executeCommand(command);
@@ -512,18 +511,18 @@ function registerIntegrationTools() {
     "prism_integrations_flows_listen",
     "Set a flow to 'Listening Mode,' allowing you to capture webhook payloads or polling trigger response and save them as payloads to be used by the integrations:flows:test command. For flows using polling triggers, the user should create the events before invoking this tool. For flows using webhook triggers, the user creates the event while you listen.",
     {
+      flowName: z.string().optional(),
       integrationId: z.string(),
-      flowId: z.string().optional(),
       outputDir: z.string().optional(),
-      timeout: z.number().optional(),
+      timeout: z.number().positive().describe("In seconds").optional(),
     },
-    async ({ integrationId, flowId, outputDir, timeout }) => {
+    async ({ flowName, integrationId, outputDir, timeout = 300 }) => {
       try {
         const manager = PrismCLIManager.getInstance();
         const command = buildCommand("integrations:flows:listen", {
-          "flow-id": flowId,
+          "flow-name": flowName,
           "integration-id": integrationId,
-          timeout: timeout || 300, // 5 minutes
+          timeout,
           output: outputDir,
           quiet: true,
           "no-prompt": true,
