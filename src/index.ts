@@ -15,14 +15,10 @@ import {
   generateFlowFile,
 } from "./generate.js";
 
-const server = new McpServer({
-  name: "prism-mcp",
-  version: "1.0.0",
-});
+export const VALID_TOOLSETS = ["integration", "component"] as const;
+export type Toolset = (typeof VALID_TOOLSETS)[number];
 
-const VALID_TOOLSETS = ["integration", "component"];
-
-function registerGeneralTools() {
+function registerGeneralTools(server: McpServer) {
   server.tool(
     "prism_me",
     "Check Prismatic login status and display current user profile information",
@@ -98,7 +94,7 @@ function registerGeneralTools() {
   );
 }
 
-function registerIntegrationTools() {
+function registerIntegrationTools(server: McpServer) {
   server.tool(
     "prism_integrations_list",
     "List all integrations in your organization",
@@ -538,7 +534,7 @@ function registerIntegrationTools() {
   );
 }
 
-function registerComponentTools() {
+function registerComponentTools(server: McpServer) {
   server.tool(
     "prism_components_init",
     "Initialize a new Prismatic custom component",
@@ -651,9 +647,11 @@ function registerComponentTools() {
   );
 }
 
-function registerTools(toolsets: string[] = []) {
+function registerTools(server: McpServer, toolsets: Toolset[] = []) {
   if (toolsets && toolsets.length > 0) {
-    const invalidToolsets = toolsets.filter((toolset) => !VALID_TOOLSETS.includes(toolset));
+    const invalidToolsets = toolsets.filter(
+      (toolset) => !VALID_TOOLSETS.includes(toolset as (typeof VALID_TOOLSETS)[number]),
+    );
     if (invalidToolsets.length > 0) {
       throw Error(
         `Invalid toolset: ${invalidToolsets.join(
@@ -663,25 +661,52 @@ function registerTools(toolsets: string[] = []) {
     }
   }
 
-  registerGeneralTools();
+  registerGeneralTools(server);
 
   if (toolsets.length > 0) {
     toolsets.forEach((toolset) => {
       switch (toolset) {
         case "component":
-          registerComponentTools();
+          registerComponentTools(server);
           break;
         case "integration":
-          registerIntegrationTools();
+          registerIntegrationTools(server);
           break;
         default:
           break;
       }
     });
   } else {
-    registerComponentTools();
-    registerIntegrationTools();
+    registerComponentTools(server);
+    registerIntegrationTools(server);
   }
+}
+
+export interface CreateServerOptions {
+  workingDirectory: string;
+  toolsets?: Toolset[];
+  prismaticUrl?: string;
+}
+
+/**
+ * Creates and configures an MCP server instance.
+ * Use this for testing with InMemoryTransport or custom transports.
+ */
+export function createServer(options: CreateServerOptions): McpServer {
+  const { workingDirectory, toolsets = [], prismaticUrl } = options;
+
+  // Initialize the CLI manager
+  PrismCLIManager.getInstance(workingDirectory, prismaticUrl);
+
+  // Create and configure the server
+  const server = new McpServer({
+    name: "prism-mcp",
+    version: "1.0.0",
+  });
+
+  registerTools(server, toolsets);
+
+  return server;
 }
 
 async function main() {
@@ -689,7 +714,7 @@ async function main() {
     // Parse command line arguments
     const args = process.argv.slice(2);
     const workingDirectory = args[0];
-    const toolsetsArg = args.slice(1); // Remaining arguments are toolsets
+    const toolsetsArg = args.slice(1) as Toolset[];
 
     if (!workingDirectory) {
       console.error("Error: WORKING_DIRECTORY argument is required");
@@ -700,11 +725,13 @@ async function main() {
     // Move agent to the working dir
     process.chdir(workingDirectory);
 
-    // Initialize the manager with working directory from command line first
-    PrismCLIManager.getInstance(workingDirectory, process.env.PRISMATIC_URL);
+    // Create the server
+    const server = createServer({
+      workingDirectory,
+      toolsets: toolsetsArg,
+      prismaticUrl: process.env.PRISMATIC_URL,
+    });
 
-    // Then register tools with specified toolsets (or all if none specified)
-    registerTools(toolsetsArg);
     const transport = new StdioServerTransport();
     await server.connect(transport);
     console.error(`Prism MCP server running in ${workingDirectory}`);
@@ -717,7 +744,11 @@ async function main() {
   }
 }
 
-main().catch((error) => {
-  console.error("Fatal error:", error);
-  process.exit(1);
-});
+// Only run main() when this file is the entry point (not when imported for testing)
+const isMainModule = import.meta.url === `file://${process.argv[1]}`;
+if (isMainModule) {
+  main().catch((error) => {
+    console.error("Fatal error:", error);
+    process.exit(1);
+  });
+}
