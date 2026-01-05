@@ -516,7 +516,7 @@ function registerIntegrationTools() {
       outputDir: z.string().optional(),
       timeout: z.number().positive().describe("In seconds").optional(),
     },
-    async ({ flowName, integrationId, outputDir, timeout = 300 }) => {
+    async ({ flowName, integrationId, outputDir, timeout = DEFAULT_TIMEOUT }) => {
       try {
         const manager = PrismCLIManager.getInstance();
         const command = buildCommand("integrations:flows:listen", {
