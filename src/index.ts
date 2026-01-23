@@ -44,8 +44,9 @@ function registerGeneralTools() {
     "List all components available in your organization",
     {
       search: z.string().optional(),
+      columns: z.string().optional().describe("Comma separated list").default("key,label,public"),
     },
-    async ({ search }) => {
+    async ({ search, columns }) => {
       if (search === "http") {
         return formatToolResult(
           JSON.stringify({
@@ -67,6 +68,7 @@ function registerGeneralTools() {
             const command = buildCommand("components:list", {
               output: "json",
               search,
+              columns,
             });
             const { stdout } = await manager.executeCommand(command);
             return formatToolResult(
@@ -105,9 +107,14 @@ function registerIntegrationTools() {
     "List all integrations in your organization",
     {
       search: z.string().optional(),
+      columns: z
+        .string()
+        .optional()
+        .describe("Comma separated list")
+        .default("name,description,version"),
     },
-    async ({ search }) => {
-      const baseParams = { output: "json", extended: true };
+    async ({ search, columns }) => {
+      const baseParams = { output: "json", extended: true, columns };
       try {
         const manager = PrismCLIManager.getInstance();
 
@@ -318,13 +325,14 @@ function registerIntegrationTools() {
     "If using spectral@10.6.0 or greater, generate a manifest in CNI src.",
     {
       directory: z.string().optional(),
+      isPrivateComponent: z.boolean().optional(),
       componentKey: z.string(),
     },
-    async ({ directory, componentKey }) => {
+    async ({ directory, isPrivateComponent, componentKey }) => {
       try {
         // First attempt to generate the component-manifest in src. This only works in versions of spectral > 10.6.0.
         // We are assuming npx is available because you need it to run this server in the first place.
-        const command = `npx cni-component-manifest ${componentKey}`;
+        const command = `npx cni-component-manifest ${componentKey} ${isPrivateComponent ? "--private" : ""}`;
         const manager = PrismCLIManager.getInstance();
         const result = await execAsync(command, {
           cwd: directory || manager.getWorkingDirectory(),
@@ -615,7 +623,7 @@ function registerComponentTools() {
 
   server.tool(
     "prism_components_generate_manifest",
-    "Generate the type manifest for a Prismatic component to enable its usage within a Code-Native Integration",
+    "Generate the type manifest for a Prismatic component to enable its usage within a Code-Native Integration.",
     {
       componentDir: z.string(),
       outputDir: z.string().optional(),
@@ -624,6 +632,7 @@ function registerComponentTools() {
       skipSignatureVerify: z.boolean().optional(),
       version: z.string().optional(),
       name: z.string().optional(),
+      isPrivateComponent: z.boolean().optional(),
     },
     async ({ componentDir, outputDir, registry, dryRun, skipSignatureVerify, version, name }) => {
       try {
