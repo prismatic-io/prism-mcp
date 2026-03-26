@@ -1,0 +1,20 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.prismatic-io/prism-mcp",
+  "description": "MCP server that wraps Prismatic's Prism CLI tool",
+  "repository": {
+    "url": "https://github.com/prismatic-io/prism-mcp",
+    "source": "github"
+  },
+  "version": "1.4.1",
+  "packages": [
+    {
+      "registryType": "npm",
+      "identifier": "@prismatic-io/prism-mcp",
+      "version": "1.4.1",
+      "transport": {
+        "type": "stdio"
+      }
+    }
+  ]
+}
