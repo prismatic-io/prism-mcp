@@ -1,6 +1,6 @@
 {
   "name": "@prismatic-io/prism-mcp",
-  "version": "1.4.1",
+  "version": "1.4.2",
   "mcpName": "io.github.prismatic-io/prism-mcp",
   "description": "MCP server that wraps Prismatic's Prism CLI tool",
   "keywords": ["prismatic"],
@@ -33,8 +33,8 @@
     "check": "biome check ."
   },
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.12.1",
-    "lodash-es": "^4.17.21",
+    "@modelcontextprotocol/sdk": "^1.29.0",
+    "lodash-es": "^4.17.23",
     "tsx": "^4.19.4",
     "typescript": "^5.8.3",
     "zod": "^3.25.0"
