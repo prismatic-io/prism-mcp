@@ -114,7 +114,7 @@ function registerIntegrationTools() {
         .default("name,description,version"),
     },
     async ({ search, columns }) => {
-      const baseParams = { output: "json", extended: true, columns };
+      const baseParams = { output: "json", extended: !columns, columns };
       try {
         const manager = PrismCLIManager.getInstance();
 
