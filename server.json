@@ -6,12 +6,45 @@
     "url": "https://github.com/prismatic-io/prism-mcp",
     "source": "github"
   },
-  "version": "1.4.1",
+  "version": "1.4.2",
   "packages": [
     {
       "registryType": "npm",
       "identifier": "@prismatic-io/prism-mcp",
-      "version": "1.4.1",
+      "version": "1.4.2",
+      "packageArguments": [
+        {
+          "type": "positional",
+          "value": "{workingDirectory}",
+          "valueHint": "workingDirectory",
+          "description": "Path to the working directory for the MCP server",
+          "isRequired": true,
+          "format": "filepath",
+          "variables": {
+            "workingDirectory": {
+              "description": "Path to the working directory for the MCP server",
+              "isRequired": true,
+              "format": "filepath",
+              "placeholder": "/path/to/code"
+            }
+          }
+        },
+        {
+          "type": "positional",
+          "value": "{toolFilter}",
+          "valueHint": "toolFilter",
+          "description": "Limit tools to a specific domain. Pass 'integration' or 'component' to restrict available tools.",
+          "isRequired": false,
+          "variables": {
+            "toolFilter": {
+              "description": "Limit tools to a specific domain",
+              "isRequired": false,
+              "choices": ["integration", "component"],
+              "placeholder": "integration"
+            }
+          }
+        }
+      ],
       "transport": {
         "type": "stdio"
       }
