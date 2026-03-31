@@ -6,3 +6,6 @@ dist/
 .env.local
 .env.*.local
 .claude
+
+# MCP Registry tokens
+.mcpregistry_*_token
