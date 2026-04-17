@@ -1,7 +1,7 @@
 import { exec } from "node:child_process";
-import { findExecutable } from "./findExecutablePath.js";
-import { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
 import { promisify } from "node:util";
+import { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
+import { findExecutable } from "./findExecutablePath.js";
 
 export const execAsync = promisify(exec);
 

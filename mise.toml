@@ -1,3 +1,45 @@
 [tools]
-github-cli = "2.43.1"
-nodejs = "24.14.1"
+"github-cli" = "2.43.1"
+bun = "1.3.12"
+node = "24"
+
+[tasks.build]
+description = "Build the project"
+run = "bun run build"
+
+[tasks.check]
+description = "Check formatting, lint, and imports (biome)"
+run = "bun run check"
+
+[tasks.validate]
+description = "Run all validation checks"
+depends = ["check", "build"]
+
+[tasks.version-bump]
+description = "Bump package.json + server.json version (set BUMP_TYPE=patch|minor|major|preview)"
+run = """
+if [ "$BUMP_TYPE" = "preview" ]; then
+  npm version prerelease --preid=preview --no-git-tag-version
+else
+  npm version $BUMP_TYPE --no-git-tag-version
+fi
+VERSION=$(node -p "require('./package.json').version") node -e "
+  const fs = require('node:fs');
+  const server = JSON.parse(fs.readFileSync('server.json', 'utf8'));
+  server.version = process.env.VERSION;
+  server.packages[0].version = process.env.VERSION;
+  fs.writeFileSync('server.json', JSON.stringify(server, null, 2) + '\\n');
+"
+"""
+
+[tasks.release]
+description = "Trigger a release (usage: mise run release -- patch|minor|major|preview)"
+run = """
+BUMP="{{arg(i=0, name='bump', required=true)}}"
+if [ "$BUMP" != "patch" ] && [ "$BUMP" != "minor" ] && [ "$BUMP" != "major" ] && [ "$BUMP" != "preview" ]; then
+  echo "ERROR: Invalid bump type '$BUMP'. Must be patch, minor, major, or preview."
+  exit 1
+fi
+gh workflow run release.yml -f bump="$BUMP"
+echo "Release workflow triggered with bump=$BUMP"
+"""

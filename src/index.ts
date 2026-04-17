@@ -1,12 +1,10 @@
 #!/usr/bin/env node
-import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
-import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { snakeCase } from "lodash-es";
 import path from "node:path";
+import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
+import { snakeCase } from "lodash-es";
 import { z } from "zod";
 
-import { formatToolResult, buildCommand, execAsync } from "./helpers.js";
-import { PrismCLIManager } from "./prism-cli-manager.js";
 import {
   generateConfigPage,
   generateConfigVar,
@@ -14,6 +12,8 @@ import {
   generateDataSourceConfigVar,
   generateFlowFile,
 } from "./generate.js";
+import { buildCommand, execAsync, formatToolResult } from "./helpers.js";
+import { PrismCLIManager } from "./prism-cli-manager.js";
 
 const server = new McpServer({
   name: "prism-mcp",
