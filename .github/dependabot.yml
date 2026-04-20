@@ -15,6 +15,14 @@ updates:
       # Biome bumps require updating the $schema URL in biome.jsonc files,
       # which dependabot doesn't do. Bump manually.
       - dependency-name: "@biomejs/biome"
+      # Stay on zod 3.x until @modelcontextprotocol/sdk's public API no longer
+      # depends on zod v3-shaped types. On SDK 1.29, bumping zod to v4 breaks
+      # McpServer.tool() overload resolution (the v3/v4 compat union rejects
+      # v4 schemas). Re-evaluate when upgrading to SDK 2.x, which removes zod
+      # from public APIs entirely:
+      # https://github.com/modelcontextprotocol/typescript-sdk/pull/1606
+      - dependency-name: "zod"
+        update-types: ["version-update:semver-major"]
 
   - package-ecosystem: "github-actions"
     directory: "/"
