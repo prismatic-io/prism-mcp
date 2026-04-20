@@ -30,6 +30,9 @@ VERSION=$(node -p "require('./package.json').version") node -e "
   server.packages[0].version = process.env.VERSION;
   fs.writeFileSync('server.json', JSON.stringify(server, null, 2) + '\\n');
 "
+# npm version and JSON.stringify re-expand single-element arrays, which the
+# publish-time `biome check` rejects. Reformat so the release commit is clean.
+bun biome format --write package.json server.json
 """
 
 [tasks.release]
