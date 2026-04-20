@@ -6,12 +6,12 @@
     "url": "https://github.com/prismatic-io/prism-mcp",
     "source": "github"
   },
-  "version": "1.4.3",
+  "version": "1.4.4",
   "packages": [
     {
       "registryType": "npm",
       "identifier": "@prismatic-io/prism-mcp",
-      "version": "1.4.3",
+      "version": "1.4.4",
       "packageArguments": [
         {
           "type": "positional",
