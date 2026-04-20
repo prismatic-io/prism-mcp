@@ -6,12 +6,12 @@
     "url": "https://github.com/prismatic-io/prism-mcp",
     "source": "github"
   },
-  "version": "1.4.2",
+  "version": "1.4.3",
   "packages": [
     {
       "registryType": "npm",
       "identifier": "@prismatic-io/prism-mcp",
-      "version": "1.4.2",
+      "version": "1.4.3",
       "packageArguments": [
         {
           "type": "positional",
@@ -39,7 +39,10 @@
             "toolFilter": {
               "description": "Limit tools to a specific domain",
               "isRequired": false,
-              "choices": ["integration", "component"],
+              "choices": [
+                "integration",
+                "component"
+              ],
               "placeholder": "integration"
             }
           }
