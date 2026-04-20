@@ -39,10 +39,7 @@
             "toolFilter": {
               "description": "Limit tools to a specific domain",
               "isRequired": false,
-              "choices": [
-                "integration",
-                "component"
-              ],
+              "choices": ["integration", "component"],
               "placeholder": "integration"
             }
           }
