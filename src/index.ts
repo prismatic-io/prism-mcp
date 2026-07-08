@@ -5,6 +5,7 @@ import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 import { snakeCase } from "lodash-es";
 import { z } from "zod";
 
+import { resolveLocalBin } from "./findExecutablePath.js";
 import {
   generateConfigPage,
   generateConfigVar,
@@ -13,6 +14,7 @@ import {
   generateFlowFile,
 } from "./generate.js";
 import { buildArgs, formatToolResult, run } from "./helpers.js";
+import { confineToWorkingDir } from "./paths.js";
 import { PrismCLIManager } from "./prism-cli-manager.js";
 
 const server = new McpServer({
@@ -300,9 +302,10 @@ function registerIntegrationTools() {
         }
 
         const manager = PrismCLIManager.getInstance();
+        const dir = await confineToWorkingDir(directory, manager.getWorkingDirectory());
 
         // First, run npm build in the integration directory
-        await run("npm", ["run", "build"], directory);
+        await run("npm", ["run", "build"], dir);
 
         const command = buildArgs(["integrations:import"], {
           integrationId,
@@ -312,7 +315,7 @@ function registerIntegrationTools() {
         });
 
         // Execute import command in the specified directory
-        const { stdout } = await manager.executeCommand(command, directory);
+        const { stdout } = await manager.executeCommand(command, dir);
         return formatToolResult(stdout);
       } catch (error) {
         throw new Error(`Failed to import integration: ${(error as Error).message}`);
@@ -335,13 +338,26 @@ function registerIntegrationTools() {
     },
     async ({ directory, isPrivateComponent, componentKey }) => {
       try {
-        // First attempt to generate the component-manifest in src. This only works in versions of spectral > 10.6.0.
-        // We are assuming npx is available because you need it to run this server in the first place.
+        // cni-component-manifest ships as a bin inside @prismatic-io/spectral (>= 10.6.0).
+        // Resolve it from the project's own install so it matches the project's spectral version.
         const manager = PrismCLIManager.getInstance();
+        const dir = await confineToWorkingDir(directory, manager.getWorkingDirectory());
+        const executable = await resolveLocalBin(
+          dir,
+          "@prismatic-io/spectral",
+          "cni-component-manifest",
+        );
+        if (!executable) {
+          throw new Error(
+            "cni-component-manifest not found. Install @prismatic-io/spectral (>= 10.6.0) in the " +
+              "project, or use prism_install_legacy_component_manifest",
+          );
+        }
         const result = await run(
-          "npx",
-          ["cni-component-manifest", componentKey, ...(isPrivateComponent ? ["--private"] : [])],
-          directory || manager.getWorkingDirectory(),
+          executable.command,
+          [...executable.args, componentKey, ...(isPrivateComponent ? ["--private"] : [])],
+          dir,
+          { inheritSecrets: true },
         );
 
         return formatToolResult(
@@ -602,9 +618,10 @@ function registerComponentTools() {
     }) => {
       try {
         const manager = PrismCLIManager.getInstance();
+        const dir = await confineToWorkingDir(directory, manager.getWorkingDirectory());
 
         // First, run npm build in the component directory
-        await run("npm", ["run", "build"], directory);
+        await run("npm", ["run", "build"], dir);
 
         const command = buildArgs(["components:publish"], {
           comment,
@@ -619,7 +636,7 @@ function registerComponentTools() {
         });
 
         // Execute publish command in the specified directory
-        const { stdout } = await manager.executeCommand(command, directory);
+        const { stdout } = await manager.executeCommand(command, dir);
         return formatToolResult(stdout);
       } catch (error) {
         throw new Error(`Failed to publish component: ${(error as Error).message}`);
@@ -642,12 +659,15 @@ function registerComponentTools() {
     },
     async ({ componentDir, outputDir, registry, dryRun, skipSignatureVerify, version, name }) => {
       try {
+        const manager = PrismCLIManager.getInstance();
+        const dir = await confineToWorkingDir(componentDir, manager.getWorkingDirectory());
+
         // Build the component before attempting to generate the manifest
-        await run("npm", ["run", "build"], componentDir);
+        await run("npm", ["run", "build"], dir);
 
         const args = buildArgs(["component-manifest"], {
           "output-dir": outputDir
-            ? path.join(outputDir, `${path.basename(componentDir) || name}-manifest`)
+            ? path.join(outputDir, `${path.basename(dir) || name}-manifest`)
             : undefined,
           registry,
           "dry-run": dryRun,
@@ -656,7 +676,7 @@ function registerComponentTools() {
           name,
         });
 
-        const { stdout } = await run(args[0], args.slice(1), componentDir);
+        const { stdout } = await run(args[0], args.slice(1), dir, { inheritSecrets: true });
         return formatToolResult(stdout);
       } catch (error) {
         throw new Error(`Failed to generate component manifest: ${(error as Error).message}`);
@@ -702,14 +722,17 @@ async function main() {
   try {
     // Parse command line arguments
     const args = process.argv.slice(2);
-    const workingDirectory = args[0];
+    const workingDirectoryArg = args[0];
     const toolsetsArg = args.slice(1); // Remaining arguments are toolsets
 
-    if (!workingDirectory) {
+    if (!workingDirectoryArg) {
       console.error("Error: WORKING_DIRECTORY argument is required");
       console.error("Usage: prism-mcp <working-directory> [toolsets...]");
       process.exit(1);
     }
+
+    // Absolute path: a stable confinement anchor for tool cwds.
+    const workingDirectory = path.resolve(workingDirectoryArg);
 
     // Move agent to the working dir
     process.chdir(workingDirectory);

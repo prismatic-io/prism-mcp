@@ -48,13 +48,32 @@ export const buildArgs = (base: string[], options: Record<string, unknown>): str
   return args;
 };
 
-/** Run a command without a shell (argv, no quoting), throwing its output on a non-zero exit. */
+/** Credential vars (read by the prism CLI) withheld from subprocesses that don't authenticate. */
+const SENSITIVE_ENV = ["PRISM_REFRESH_TOKEN", "PRISM_ACCESS_TOKEN"];
+
+/**
+ * `process.env` with credential vars set to `undefined` (not removed): tinyexec re-spreads
+ * `process.env`, so the keys must be overridden for spawn to drop them.
+ */
+const scrubbedEnv = (): NodeJS.ProcessEnv =>
+  Object.fromEntries([
+    ...Object.entries(process.env).filter(([key]) => !SENSITIVE_ENV.includes(key)),
+    ...SENSITIVE_ENV.map((key): [string, undefined] => [key, undefined]),
+  ]);
+
+/**
+ * Run a command without a shell (argv, no quoting), throwing its output on a non-zero exit.
+ * Credential vars are withheld from the child unless `inheritSecrets` is set.
+ */
 export const run = async (
   command: string,
   args: string[],
   cwd: string,
+  { inheritSecrets = false }: { inheritSecrets?: boolean } = {},
 ): Promise<{ stdout: string; stderr: string }> => {
-  const result = await x(command, args, { nodeOptions: { cwd } });
+  const result = await x(command, args, {
+    nodeOptions: { cwd, env: inheritSecrets ? process.env : scrubbedEnv() },
+  });
 
   if (result.exitCode !== 0) {
     const output = [result.stdout, result.stderr]
