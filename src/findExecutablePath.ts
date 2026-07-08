@@ -1,7 +1,8 @@
 import { existsSync } from "node:fs";
 import { readFile, stat } from "node:fs/promises";
 import { createRequire } from "node:module";
-import { dirname, join } from "node:path";
+import { dirname, join, resolve } from "node:path";
+import { pathToFileURL } from "node:url";
 
 export interface ExecutablePath {
   command: string;
@@ -27,20 +28,24 @@ const resolveOverride = async (): Promise<ExecutablePath | null> => {
   return null;
 };
 
-/** Resolve the prism CLI: an `MCP_PRISM_PATH` override, else the lockfile-pinned bundled dependency. */
-export const resolvePrismExecutable = async (): Promise<ExecutablePath | null> => {
-  const override = await resolveOverride();
-  if (override) {
-    return override;
-  }
-
+/** Resolve `packageName`'s `binName` bin to a `node <bin>` argv, or null if it's missing. */
+const resolveBin = async (
+  require: ReturnType<typeof createRequire>,
+  packageName: string,
+  binName: string,
+): Promise<ExecutablePath | null> => {
   try {
-    const require = createRequire(import.meta.url);
-    const pkgJsonPath = require.resolve(`${PRISM_PACKAGE}/package.json`);
+    const pkgJsonPath = require.resolve(`${packageName}/package.json`);
     const pkg = JSON.parse(await readFile(pkgJsonPath, "utf8")) as {
       bin?: string | Record<string, string>;
     };
-    const binRelative = typeof pkg.bin === "string" ? pkg.bin : pkg.bin?.prism;
+    // A string `bin` uses the package's unscoped name; otherwise look it up in the bin map.
+    let binRelative: string | undefined;
+    if (typeof pkg.bin === "string") {
+      binRelative = binName === packageName.split("/").pop() ? pkg.bin : undefined;
+    } else {
+      binRelative = pkg.bin?.[binName];
+    }
     if (!binRelative) {
       return null;
     }
@@ -52,4 +57,25 @@ export const resolvePrismExecutable = async (): Promise<ExecutablePath | null> =
   } catch {
     return null;
   }
+};
+
+/** Resolve a bin from `workingDirectory`'s own dependency tree (e.g. spectral's cni-component-manifest). */
+export const resolveLocalBin = (
+  workingDirectory: string,
+  packageName: string,
+  binName: string,
+): Promise<ExecutablePath | null> =>
+  resolveBin(
+    createRequire(pathToFileURL(join(resolve(workingDirectory), "noop.js"))),
+    packageName,
+    binName,
+  );
+
+/** Resolve the prism CLI: an `MCP_PRISM_PATH` override, else the lockfile-pinned bundled dependency. */
+export const resolvePrismExecutable = async (): Promise<ExecutablePath | null> => {
+  const override = await resolveOverride();
+  if (override) {
+    return override;
+  }
+  return resolveBin(createRequire(import.meta.url), PRISM_PACKAGE, "prism");
 };

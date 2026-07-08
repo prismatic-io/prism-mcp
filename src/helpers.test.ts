@@ -1,5 +1,5 @@
 import { tmpdir } from "node:os";
-import { describe, expect, test } from "vitest";
+import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { buildArgs, run } from "./helpers.js";
 
 describe("buildArgs", () => {
@@ -90,5 +90,44 @@ describe("run", () => {
 
   test("throws a fallback message when there is no output", async () => {
     await expect(run("node", ["-e", "process.exit(3)"], cwd)).rejects.toThrow(/exited with code 3/);
+  });
+
+  describe("credential scrubbing", () => {
+    // Both tokens the prism CLI reads for auth; each must be withheld from scrubbed children.
+    const SENSITIVE = ["PRISM_ACCESS_TOKEN", "PRISM_REFRESH_TOKEN"];
+    const readToken = (key: string) => [
+      "-e",
+      `process.stdout.write(process.env.${key} ?? '<unset>')`,
+    ];
+
+    beforeEach(() => {
+      for (const key of SENSITIVE) {
+        vi.stubEnv(key, "super-secret");
+      }
+    });
+
+    afterEach(() => {
+      vi.unstubAllEnvs();
+    });
+
+    test.each(SENSITIVE)("withholds %s from the child by default", async (key) => {
+      const { stdout } = await run("node", readToken(key), cwd);
+      expect(stdout).toBe("<unset>");
+    });
+
+    test.each(SENSITIVE)("forwards %s when inheritSecrets is set", async (key) => {
+      const { stdout } = await run("node", readToken(key), cwd, { inheritSecrets: true });
+      expect(stdout).toBe("super-secret");
+    });
+
+    test("still forwards non-sensitive env vars when scrubbing", async () => {
+      vi.stubEnv("PRISMATIC_URL", "https://example.test/");
+      const { stdout } = await run(
+        "node",
+        ["-e", "process.stdout.write(process.env.PRISMATIC_URL ?? '<unset>')"],
+        cwd,
+      );
+      expect(stdout).toBe("https://example.test/");
+    });
   });
 });

@@ -1,5 +1,6 @@
 import { x } from "tinyexec";
 import { type ExecutablePath, resolvePrismExecutable } from "./findExecutablePath.js";
+import { confineToWorkingDir } from "./paths.js";
 
 export const DEFAULT_PRISMATIC_URL = "https://app.prismatic.io/";
 
@@ -74,11 +75,13 @@ export class PrismCLIManager {
     customCwd?: string,
   ): Promise<{ stdout: string; stderr: string }> {
     const executable = await this.getExecutable();
+    // Confine the cwd to the working directory even if a caller forgot to gate its input.
+    const cwd = await confineToWorkingDir(customCwd, this.workingDirectory);
 
     try {
       const result = await x(executable.command, [...executable.args, ...args], {
         nodeOptions: {
-          cwd: customCwd || this.workingDirectory,
+          cwd,
           env: {
             ...process.env,
             PRISMATIC_URL: this.prismaticUrl,
