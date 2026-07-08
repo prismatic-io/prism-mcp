@@ -57,16 +57,12 @@ If no `TOOLSETS` environment variable is set, all tools are registered by defaul
 
 ## Prerequisites
 
-1. Install the Prism CLI globally:
+Authenticate with Prismatic. The server bundles its own pinned copy of the Prism CLI, so you don't need to install one for the server to use — but you do need to be logged in. Install the CLI to run the login command (it writes credentials to a shared config file the server reads automatically), or in headless/CI environments set `PRISM_REFRESH_TOKEN` instead.
 
-   ```bash
-   npm install --global @prismatic-io/prism
-   ```
-
-2. Authenticate with Prismatic:
-   ```bash
-   prism login
-   ```
+```bash
+npm install --global @prismatic-io/prism
+prism login
+```
 
 ## Usage
 
@@ -113,7 +109,7 @@ Command-line arguments:
 Optional environment variable options:
 
 - `PRISMATIC_URL`: `https://app.prismatic.io` by default. If your Prismatic tenant is hosted in a different region, or if you use a private stack deployment, set this variable to your Prismatic URL.
-- `MCP_PRISM_PATH`: Optional. If set, the MCP server will use this specific path to the Prism CLI executable instead of searching for it via `npx` or in your system PATH. This is useful if you have multiple Prism CLI installations or want to use a specific version. If setting this variable, use an absolute path and not a relative one.
+- `MCP_PRISM_PATH`: Absolute path to a specific Prism CLI to run instead of the bundled one (e.g. a locally built CLI). Must point at a regular file; otherwise the bundled CLI is used.
 
 ### Installing with Claude Desktop
 

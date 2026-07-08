@@ -1,13 +1,7 @@
-import { exec } from "node:child_process";
-import { promisify } from "node:util";
 import { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
-import { findExecutable } from "./findExecutablePath.js";
+import { x } from "tinyexec";
 
-export const execAsync = promisify(exec);
-
-/**
- * Parse output and format as CallToolResult
- */
+/** Parse `stdout` as JSON (falling back to raw text) and wrap it as a CallToolResult. */
 export function formatToolResult(stdout: string, dataKey?: string): CallToolResult {
   try {
     const data = JSON.parse(stdout);
@@ -32,43 +26,43 @@ export function formatToolResult(stdout: string, dataKey?: string): CallToolResu
   }
 }
 
-/**
- * Build command with optional flags
- */
-export function buildCommand(baseCommand: string, options: Record<string, any>): string {
-  let command = baseCommand;
+/** Build an argv from a base (subcommand + positionals) and an options map, one entry per value. */
+export const buildArgs = (base: string[], options: Record<string, unknown>): string[] => {
+  const args = [...base];
 
   for (const [key, value] of Object.entries(options)) {
-    if (value !== undefined && value !== null) {
-      if (typeof value === "boolean" && value) {
-        command += ` --${key}`;
-      } else if (typeof value === "string") {
-        command += ` --${key} "${value}"`;
-      } else if (typeof value === "number") {
-        command += ` --${key} ${value}`;
+    if (value === undefined || value === null) {
+      continue;
+    }
+    if (typeof value === "boolean") {
+      if (value) {
+        args.push(`--${key}`);
       }
+    } else if (typeof value === "string") {
+      args.push(`--${key}`, value);
+    } else if (typeof value === "number") {
+      args.push(`--${key}`, String(value));
     }
   }
 
-  return command;
-}
+  return args;
+};
 
-/**
- * Find prism executable path.
- */
-export async function findPrismPath(): Promise<string | null> {
-  const result = await findExecutable("prism", {
-    npxPackage: "@prismatic-io/prism@latest",
-    logPrefix: "findPrismPath",
-  });
+/** Run a command without a shell (argv, no quoting), throwing its output on a non-zero exit. */
+export const run = async (
+  command: string,
+  args: string[],
+  cwd: string,
+): Promise<{ stdout: string; stderr: string }> => {
+  const result = await x(command, args, { nodeOptions: { cwd } });
 
-  if (!result) {
-    return null;
+  if (result.exitCode !== 0) {
+    const output = [result.stdout, result.stderr]
+      .map((stream) => stream.trim())
+      .filter(Boolean)
+      .join("\n");
+    throw new Error(output || `\`${command}\` exited with code ${result.exitCode}`);
   }
 
-  if (result.isNpx) {
-    return `${result.command} ${result.args.join(" ")}`;
-  }
-
-  return result.command;
-}
+  return { stdout: result.stdout, stderr: result.stderr };
+};

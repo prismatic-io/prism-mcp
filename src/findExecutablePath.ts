@@ -1,78 +1,55 @@
-import { exec } from "node:child_process";
-import { promisify } from "node:util";
-
-const execAsync = promisify(exec);
-
-interface FindExecutablePathOptions {
-  npxPackage?: string;
-  logPrefix?: string;
-}
+import { existsSync } from "node:fs";
+import { readFile, stat } from "node:fs/promises";
+import { createRequire } from "node:module";
+import { dirname, join } from "node:path";
 
 export interface ExecutablePath {
   command: string;
   args: string[];
-  isNpx: boolean;
 }
 
-export async function findExecutable(
-  executable: string,
-  options: FindExecutablePathOptions = {},
-): Promise<ExecutablePath | null> {
-  const { npxPackage, logPrefix = "findExecutable" } = options;
-  const prismPath = process.env.MCP_PRISM_PATH;
+const PRISM_PACKAGE = "@prismatic-io/prism";
 
-  if (prismPath) {
-    try {
-      await execAsync(`"${prismPath}" --version`);
-
-      return {
-        command: prismPath,
-        args: [],
-        isNpx: false,
-      };
-    } catch (error) {
-      console.error(
-        `${logPrefix}: MCP_PRISM_PATH (${prismPath}) is not valid or executable:`,
-        error,
-      );
-      // Continue to fallback methods
+/** Explicit `MCP_PRISM_PATH` override; must be a regular file. */
+const resolveOverride = async (): Promise<ExecutablePath | null> => {
+  const override = process.env.MCP_PRISM_PATH?.trim();
+  if (!override) {
+    return null;
+  }
+  try {
+    if ((await stat(override)).isFile()) {
+      return { command: override, args: [] };
     }
+    console.error(`MCP_PRISM_PATH (${override}) is not a file; using the bundled prism CLI.`);
+  } catch {
+    console.error(`MCP_PRISM_PATH (${override}) does not exist; using the bundled prism CLI.`);
+  }
+  return null;
+};
+
+/** Resolve the prism CLI: an `MCP_PRISM_PATH` override, else the lockfile-pinned bundled dependency. */
+export const resolvePrismExecutable = async (): Promise<ExecutablePath | null> => {
+  const override = await resolveOverride();
+  if (override) {
+    return override;
   }
 
-  // Test if the package is available via npx
-  if (npxPackage) {
-    try {
-      await execAsync(`npx ${npxPackage} --version`);
-
-      return {
-        command: "npx",
-        args: [npxPackage],
-        isNpx: true,
-      };
-    } catch (error) {
-      console.error(`${logPrefix}: npx package ${npxPackage} not available:`, error);
+  try {
+    const require = createRequire(import.meta.url);
+    const pkgJsonPath = require.resolve(`${PRISM_PACKAGE}/package.json`);
+    const pkg = JSON.parse(await readFile(pkgJsonPath, "utf8")) as {
+      bin?: string | Record<string, string>;
+    };
+    const binRelative = typeof pkg.bin === "string" ? pkg.bin : pkg.bin?.prism;
+    if (!binRelative) {
       return null;
     }
-  }
-
-  // Fallback to which/where for direct executable lookup
-  try {
-    const cmd = process.platform === "win32" ? `where ${executable}` : `which ${executable}`;
-
-    const { stdout } = await execAsync(cmd);
-
-    const result = stdout.split(/\r?\n/)[0].trim();
-
-    if (result) {
-      return {
-        command: result,
-        args: [],
-        isNpx: false,
-      };
+    const binPath = join(dirname(pkgJsonPath), binRelative);
+    if (!existsSync(binPath)) {
+      return null;
     }
-  } catch (error) {
-    console.error(`${logPrefix}: Error finding ${executable}:`, error);
+    return { command: process.execPath, args: [binPath] };
+  } catch {
+    return null;
   }
-
-  return null;
-}
+};

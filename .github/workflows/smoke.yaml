@@ -1,0 +1,19 @@
+name: Smoke
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  smoke:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v7.0.0
+      - uses: jdx/mise-action@v4.2.0
+      - run: mise exec -- bun install --frozen-lockfile
+      - run: mise run test

@@ -11,9 +11,17 @@ run = "bun run build"
 description = "Check formatting, lint, and imports (biome)"
 run = "bun run check"
 
+[tasks.typecheck]
+description = "Type-check the project, including tests"
+run = "bun run typecheck"
+
+[tasks.test]
+description = "Run unit tests"
+run = "bun run test"
+
 [tasks.validate]
 description = "Run all validation checks"
-depends = ["check", "build"]
+depends = ["check", "typecheck", "build", "test"]
 
 [tasks.version-bump]
 description = "Bump package.json + server.json version (set BUMP_TYPE=patch|minor|major|preview)"
