@@ -12,7 +12,7 @@ import {
   generateDataSourceConfigVar,
   generateFlowFile,
 } from "./generate.js";
-import { buildCommand, execAsync, formatToolResult } from "./helpers.js";
+import { buildArgs, formatToolResult, run } from "./helpers.js";
 import { PrismCLIManager } from "./prism-cli-manager.js";
 
 const server = new McpServer({
@@ -58,14 +58,14 @@ function registerGeneralTools() {
 
       try {
         const manager = PrismCLIManager.getInstance();
-        const fallbackCommand = buildCommand("components:list", {
+        const fallbackCommand = buildArgs(["components:list"], {
           output: "json",
         });
 
         // If search parameter is provided, try with --search flag first
         if (search) {
           try {
-            const command = buildCommand("components:list", {
+            const command = buildArgs(["components:list"], {
               output: "json",
               search,
               columns,
@@ -121,7 +121,7 @@ function registerIntegrationTools() {
         // If search parameter is provided, try with --search flag first
         if (search) {
           try {
-            const command = buildCommand("integrations:list", {
+            const command = buildArgs(["integrations:list"], {
               ...baseParams,
               search,
             });
@@ -129,13 +129,13 @@ function registerIntegrationTools() {
             return formatToolResult(stdout, "integration");
           } catch (searchError) {
             // If --search flag is not supported, fall back to command without it
-            const command = buildCommand("integrations:list", baseParams);
+            const command = buildArgs(["integrations:list"], baseParams);
             const { stdout } = await manager.executeCommand(command);
             return formatToolResult(stdout, "integration");
           }
         } else {
           // No search parameter provided, use regular command
-          const command = buildCommand("integrations:list", baseParams);
+          const command = buildArgs(["integrations:list"], baseParams);
           const { stdout } = await manager.executeCommand(command);
           return formatToolResult(stdout, "integration");
         }
@@ -159,14 +159,14 @@ function registerIntegrationTools() {
 
         try {
           // Try with --clean flag first
-          const command = buildCommand(`integrations:init ${name}`, {
+          const command = buildArgs(["integrations:init", name], {
             clean: true,
           });
           const { stdout } = await manager.executeCommand(command);
           return formatToolResult(stdout);
         } catch (cleanError) {
           // If --clean flag is not supported, fall back to command without it
-          const { stdout } = await manager.executeCommand(`integrations:init ${name}`);
+          const { stdout } = await manager.executeCommand(["integrations:init", name]);
           return formatToolResult(stdout);
         }
       } catch (error) {
@@ -186,7 +186,7 @@ function registerIntegrationTools() {
     async ({ yamlFile, folder, registryPrefix }) => {
       try {
         const manager = PrismCLIManager.getInstance();
-        const command = buildCommand("integrations:convert", {
+        const command = buildArgs(["integrations:convert"], {
           yamlFile: yamlFile,
           folder: folder,
           registryPrefix: registryPrefix,
@@ -206,7 +206,7 @@ function registerIntegrationTools() {
     async ({ integrationId, columns }) => {
       try {
         const manager = PrismCLIManager.getInstance();
-        const command = buildCommand(`integrations:flows:list "${integrationId}"`, {
+        const command = buildArgs(["integrations:flows:list", integrationId], {
           columns,
           output: "json",
         });
@@ -249,7 +249,7 @@ function registerIntegrationTools() {
     }) => {
       try {
         const manager = PrismCLIManager.getInstance();
-        const command = buildCommand("integrations:flows:test", {
+        const command = buildArgs(["integrations:flows:test"], {
           "flow-name": flowName,
           "integration-id": integrationId,
           payload: filepathToTestPayload,
@@ -302,9 +302,9 @@ function registerIntegrationTools() {
         const manager = PrismCLIManager.getInstance();
 
         // First, run npm build in the integration directory
-        await execAsync("npm run build", { cwd: directory });
+        await run("npm", ["run", "build"], directory);
 
-        const command = buildCommand("integrations:import", {
+        const command = buildArgs(["integrations:import"], {
           integrationId,
           path,
           replace,
@@ -326,17 +326,23 @@ function registerIntegrationTools() {
     {
       directory: z.string().optional(),
       isPrivateComponent: z.boolean().optional(),
-      componentKey: z.string(),
+      componentKey: z
+        .string()
+        .regex(
+          /^[a-zA-Z0-9][a-zA-Z0-9_-]*$/,
+          "componentKey must start with a letter or digit and contain only letters, digits, hyphens, and underscores",
+        ),
     },
     async ({ directory, isPrivateComponent, componentKey }) => {
       try {
         // First attempt to generate the component-manifest in src. This only works in versions of spectral > 10.6.0.
         // We are assuming npx is available because you need it to run this server in the first place.
-        const command = `npx cni-component-manifest ${componentKey} ${isPrivateComponent ? "--private" : ""}`;
         const manager = PrismCLIManager.getInstance();
-        const result = await execAsync(command, {
-          cwd: directory || manager.getWorkingDirectory(),
-        });
+        const result = await run(
+          "npx",
+          ["cni-component-manifest", componentKey, ...(isPrivateComponent ? ["--private"] : [])],
+          directory || manager.getWorkingDirectory(),
+        );
 
         return formatToolResult(
           JSON.stringify({
@@ -527,7 +533,7 @@ function registerIntegrationTools() {
     async ({ flowName, integrationId, outputDir, timeout = DEFAULT_TIMEOUT }) => {
       try {
         const manager = PrismCLIManager.getInstance();
-        const command = buildCommand("integrations:flows:listen", {
+        const command = buildArgs(["integrations:flows:listen"], {
           "flow-name": flowName,
           "integration-id": integrationId,
           timeout,
@@ -557,7 +563,7 @@ function registerComponentTools() {
     async ({ name, wsdlPath, openApiPath }) => {
       try {
         const manager = PrismCLIManager.getInstance();
-        const command = buildCommand(`components:init ${name}`, {
+        const command = buildArgs(["components:init", name], {
           "wsdl-path": wsdlPath,
           "open-api-path": openApiPath,
         });
@@ -598,9 +604,9 @@ function registerComponentTools() {
         const manager = PrismCLIManager.getInstance();
 
         // First, run npm build in the component directory
-        await execAsync("npm run build", { cwd: directory });
+        await run("npm", ["run", "build"], directory);
 
-        const command = buildCommand("components:publish", {
+        const command = buildArgs(["components:publish"], {
           comment,
           pullRequestUrl,
           repoUrl,
@@ -637,12 +643,12 @@ function registerComponentTools() {
     async ({ componentDir, outputDir, registry, dryRun, skipSignatureVerify, version, name }) => {
       try {
         // Build the component before attempting to generate the manifest
-        await execAsync("npm run build", { cwd: componentDir });
+        await run("npm", ["run", "build"], componentDir);
 
-        const command = buildCommand("component-manifest", {
+        const args = buildArgs(["component-manifest"], {
           "output-dir": outputDir
             ? path.join(outputDir, `${path.basename(componentDir) || name}-manifest`)
-            : "",
+            : undefined,
           registry,
           "dry-run": dryRun,
           "skip-signature-verify": skipSignatureVerify,
@@ -650,7 +656,7 @@ function registerComponentTools() {
           name,
         });
 
-        const { stdout } = await execAsync(command, { cwd: componentDir });
+        const { stdout } = await run(args[0], args.slice(1), componentDir);
         return formatToolResult(stdout);
       } catch (error) {
         throw new Error(`Failed to generate component manifest: ${(error as Error).message}`);

@@ -1,13 +1,17 @@
-import { execAsync, findPrismPath } from "./helpers.js";
+import { x } from "tinyexec";
+import { type ExecutablePath, resolvePrismExecutable } from "./findExecutablePath.js";
 
 export const DEFAULT_PRISMATIC_URL = "https://app.prismatic.io/";
 
-// Define schemas for validation
+const NOT_INSTALLED_MESSAGE =
+  "The bundled Prismatic CLI (@prismatic-io/prism) could not be resolved. This indicates a " +
+  "broken prism-mcp installation; reinstall it or its dependencies.";
+
 export class PrismCLIManager {
   private static instance: PrismCLIManager | null = null;
-  private prismPath: string;
   private prismaticUrl: string;
   private workingDirectory: string;
+  private cachedExecutable: ExecutablePath | null = null;
 
   /**
    * Private constructor
@@ -17,7 +21,6 @@ export class PrismCLIManager {
   private constructor(workingDirectory: string, prismaticUrl?: string) {
     this.workingDirectory = workingDirectory;
     this.prismaticUrl = prismaticUrl || DEFAULT_PRISMATIC_URL;
-    this.prismPath = "";
   }
 
   /**
@@ -44,54 +47,50 @@ export class PrismCLIManager {
     return PrismCLIManager.instance;
   }
 
-  /**
-   * Checks if the Prismatic CLI is properly installed.
-   * @param {string} [cwd] - Optional working directory for the check
-   * @returns {Promise<boolean>} A promise that resolves to true if CLI is installed, false otherwise
-   */
-  private async checkCLIInstallation(cwd?: string): Promise<boolean | string> {
-    try {
-      const path = await this.getPrismPath();
-      await execAsync(`${path} --version`, { cwd: cwd || this.workingDirectory });
-      return true;
-    } catch {
-      return false;
+  /** Resolves the prism CLI executable, caching it for the instance's lifetime. */
+  private async getExecutable(): Promise<ExecutablePath> {
+    if (this.cachedExecutable) {
+      return this.cachedExecutable;
     }
+
+    const executable = await resolvePrismExecutable();
+    if (!executable) {
+      throw new Error(NOT_INSTALLED_MESSAGE);
+    }
+
+    this.cachedExecutable = executable;
+    return executable;
   }
 
   /**
-   * Executes a Prismatic CLI command.
-   * @param {string} command - The command to execute
+   * Executes a Prismatic CLI command without a shell (args are passed as argv).
+   * @param {string[]} args - The command argv (subcommand, positionals, and flags)
    * @param {string} [customCwd] - Optional custom working directory
    * @returns {Promise<{stdout: string, stderr: string}>} A promise that resolves to an object containing stdout and stderr
-   * @throws {Error} If CLI is not installed or command execution fails
+   * @throws {Error} If the CLI cannot be resolved or command execution fails
    */
   public async executeCommand(
-    command: string,
+    args: string[],
     customCwd?: string,
   ): Promise<{ stdout: string; stderr: string }> {
-    const workingDir = customCwd || this.workingDirectory;
-    const isInstalled = await this.checkCLIInstallation(workingDir);
-
-    if (isInstalled !== true) {
-      throw new Error(
-        "Prismatic CLI is not properly installed. Please ensure @prismatic-io/prism is installed in your project dependencies.",
-      );
-    }
-
-    const path = await this.getPrismPath();
+    const executable = await this.getExecutable();
 
     try {
-      const execOptions: any = {
-        cwd: workingDir,
-        env: {
-          ...process.env,
-          PRISMATIC_URL: this.prismaticUrl,
+      const result = await x(executable.command, [...executable.args, ...args], {
+        nodeOptions: {
+          cwd: customCwd || this.workingDirectory,
+          env: {
+            ...process.env,
+            PRISMATIC_URL: this.prismaticUrl,
+          },
         },
-      };
+      });
 
-      const { stdout, stderr } = await execAsync(`${path} ${command}`, execOptions);
-      return { stdout: stdout.toString(), stderr: stderr.toString() };
+      if (result.exitCode !== 0) {
+        throw new Error(result.stderr.trim() || `exited with code ${result.exitCode}`);
+      }
+
+      return { stdout: result.stdout, stderr: result.stderr };
     } catch (error) {
       throw new Error(
         `Failed to execute Prismatic CLI command: ${
@@ -120,7 +119,7 @@ export class PrismCLIManager {
    * @returns {Promise<string>} A promise that resolves to the logout confirmation message
    */
   public async logout(): Promise<string> {
-    const { stdout } = await this.executeCommand("logout");
+    const { stdout } = await this.executeCommand(["logout"]);
 
     return stdout.trim();
   }
@@ -130,7 +129,7 @@ export class PrismCLIManager {
    * @returns {Promise<string>} A promise that resolves to the user information
    */
   public async me(): Promise<string> {
-    const { stdout } = await this.executeCommand("me");
+    const { stdout } = await this.executeCommand(["me"]);
 
     return stdout.trim();
   }
@@ -140,7 +139,7 @@ export class PrismCLIManager {
    * @returns {Promise<string>} A promise that resolves to the CLI version
    */
   public async version(): Promise<string> {
-    const { stdout } = await this.executeCommand("--version");
+    const { stdout } = await this.executeCommand(["--version"]);
 
     return stdout.trim();
   }
@@ -157,24 +156,7 @@ export class PrismCLIManager {
    * Disposes of the PrismCLIManager instance.
    */
   public dispose(): void {
+    this.cachedExecutable = null;
     PrismCLIManager.instance = null;
-  }
-
-  /**
-   * Finds the path to the Prismatic CLI.
-   * @returns {string} The path to the Prismatic CLI
-   */
-  public async getPrismPath(): Promise<string> {
-    if (this.prismPath) {
-      return this.prismPath;
-    }
-
-    const foundPath = await findPrismPath();
-    if (foundPath) {
-      this.prismPath = foundPath;
-      return foundPath;
-    }
-
-    throw new Error("Prismatic CLI not found. Please ensure @prismatic-io/prism is installed.");
   }
 }
