@@ -12,7 +12,6 @@ beforeEach(() => {
 
 afterEach(() => {
   PrismCLIManager.getInstance(process.cwd()).dispose();
-  vi.unstubAllEnvs();
 });
 
 describe("prism CLI smoke", () => {

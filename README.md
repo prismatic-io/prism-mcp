@@ -24,9 +24,10 @@ This MCP server provides several tools, organized into categories. You may regis
 
 - **prism_integrations_list**: List all integrations
 - **prism_integrations_init**: Initialize a new Code Native Integration
-- **prism_integrations_convert**: Convert a Low-Code Integration's YAML file to Code Native
+- **prism_integrations_convert**: Convert an existing Low-Code Integration to Code Native
 - **prism_integrations_flows_list**: List flows for an integration
 - **prism_integrations_flows_test**: Test a flow in an integration
+- **prism_integrations_flows_listen**: Set a flow to "Listening Mode" to capture webhook payloads or polling trigger responses, saving them as payloads for `prism_integrations_flows_test`
 - **prism_integrations_import**: Import an integration from a specific directory
 
 #### Codegen
@@ -47,13 +48,13 @@ This MCP server provides several tools, organized into categories. You may regis
 
 ### Toolset Configuration
 
-Tools are organized into **toolsets** that can be selectively enabled via the `TOOLSETS` environment variable:
+Tools are organized into **toolsets**, selected by passing their names as arguments after the working directory (see [Command-line arguments](#configuration)):
 
 - **`integration`** - Enables all integration-related tools
 - **`component`** - Enables all component-related tools
 - **General tools** are always available regardless of toolset configuration
 
-If no `TOOLSETS` environment variable is set, all tools are registered by default.
+If no toolset arguments are passed, all tools are registered by default. Naming an unrecognized toolset is a startup error.
 
 ## Prerequisites
 
