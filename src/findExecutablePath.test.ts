@@ -14,7 +14,6 @@ beforeEach(async () => {
 
 afterEach(async () => {
   await rm(tmp, { recursive: true, force: true });
-  vi.unstubAllEnvs();
 });
 
 const writeExecutable = async (path: string): Promise<string> => {

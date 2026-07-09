@@ -1,5 +1,5 @@
 import { tmpdir } from "node:os";
-import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
+import { beforeEach, describe, expect, test, vi } from "vitest";
 import { buildArgs, run } from "./helpers.js";
 
 describe("buildArgs", () => {
@@ -104,10 +104,6 @@ describe("run", () => {
       for (const key of SENSITIVE) {
         vi.stubEnv(key, "super-secret");
       }
-    });
-
-    afterEach(() => {
-      vi.unstubAllEnvs();
     });
 
     test.each(SENSITIVE)("withholds %s from the child by default", async (key) => {
