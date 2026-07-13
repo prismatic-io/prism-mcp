@@ -1,6 +1,6 @@
 {
   "name": "@prismatic-io/prism-mcp",
-  "version": "1.4.4",
+  "version": "1.5.0",
   "mcpName": "io.github.prismatic-io/prism-mcp",
   "description": "MCP server that wraps Prismatic's Prism CLI tool",
   "keywords": ["prismatic"],
