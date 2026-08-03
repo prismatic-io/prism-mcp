@@ -13,7 +13,7 @@ jobs:
         os: [macos-latest, windows-latest]
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v7.0.0
-      - uses: jdx/mise-action@v4.2.0
+      - uses: actions/checkout@v7.0.1
+      - uses: jdx/mise-action@v4.2.1
       - run: mise exec -- bun install --frozen-lockfile
       - run: mise run test
