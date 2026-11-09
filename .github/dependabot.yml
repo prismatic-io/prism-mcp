@@ -14,6 +14,9 @@ updates:
         patterns:
           - "*"
     ignore:
+      # This deprecated wrapper stays on Prism 10; Prism 11 provides native MCP support.
+      - dependency-name: "@prismatic-io/prism"
+        versions: [">=11.0.0"]
       # Biome bumps require updating the $schema URL in biome.jsonc files,
       # which dependabot doesn't do. Bump manually.
       - dependency-name: "@biomejs/biome"
