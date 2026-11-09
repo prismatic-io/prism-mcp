@@ -4,7 +4,7 @@ import { resolvePrismExecutable } from "./findExecutablePath.js";
 import { PrismCLIManager } from "./prism-cli-manager.js";
 
 const SPAWN_TIMEOUT = 30_000;
-const VERSION = /@prismatic-io\/prism\/\d+\.\d+\.\d+/;
+const VERSION = /^\d+\.\d+\.\d+$/;
 
 beforeEach(() => {
   vi.stubEnv("MCP_PRISM_PATH", "");
@@ -35,7 +35,7 @@ describe("prism CLI smoke", () => {
       const { stdout } = await PrismCLIManager.getInstance(process.cwd()).executeCommand([
         "--help",
       ]);
-      expect(stdout).toMatch(/USAGE/);
+      expect(stdout).toContain("Usage: prism <command>");
     },
     SPAWN_TIMEOUT,
   );
