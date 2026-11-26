@@ -141,4 +141,33 @@ describe("tool surface documentation", () => {
     expect(tool).toBeDefined();
     expect(tool?.description ?? "").toMatch(/data source/i);
   });
+
+  test("tools declare whether they read or change things", async () => {
+    const { client, close } = await connectClient();
+    let tools: Awaited<ReturnType<Client["listTools"]>>["tools"];
+    try {
+      ({ tools } = await client.listTools());
+    } finally {
+      await close();
+    }
+    const byName = new Map(tools.map((t) => [t.name, t]));
+
+    for (const name of [
+      "prism_me",
+      "prism_components_list",
+      "prism_integrations_list",
+      "prism_integrations_flows_list",
+    ]) {
+      expect(byName.get(name)?.annotations?.readOnlyHint, name).toBe(true);
+    }
+
+    for (const name of [
+      "prism_integrations_flows_test",
+      "prism_integrations_import",
+      "prism_components_publish",
+    ]) {
+      expect(byName.get(name)?.annotations?.readOnlyHint, name).toBe(false);
+      expect(byName.get(name)?.annotations?.destructiveHint, name).toBe(true);
+    }
+  });
 });

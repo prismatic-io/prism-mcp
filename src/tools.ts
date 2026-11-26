@@ -29,6 +29,10 @@ function registerGeneralTools(server: McpServer) {
     "prism_me",
     "Check Prismatic login status and display current user profile information",
     {},
+    {
+      readOnlyHint: true,
+      openWorldHint: true,
+    },
     async () => {
       try {
         const manager = PrismCLIManager.getInstance();
@@ -55,6 +59,10 @@ function registerGeneralTools(server: McpServer) {
         .optional()
         .describe("Comma separated list of columns")
         .default("key,label,public"),
+    },
+    {
+      readOnlyHint: true,
+      openWorldHint: true,
     },
     async ({ search, columns }) => {
       if (search === "http") {
@@ -123,6 +131,10 @@ function registerIntegrationTools(server: McpServer) {
         .optional()
         .describe("Comma separated list of columns")
         .default("name,description,version"),
+    },
+    {
+      readOnlyHint: true,
+      openWorldHint: true,
     },
     async ({ search, columns }) => {
       const baseParams = { output: "json", columns };
@@ -228,6 +240,10 @@ function registerIntegrationTools(server: McpServer) {
       integrationId: z.string().min(1).describe("ID of the integration whose flows to list"),
       columns: z.string().optional().describe("Comma separated list of columns"),
     },
+    {
+      readOnlyHint: true,
+      openWorldHint: true,
+    },
     async ({ integrationId, columns }) => {
       try {
         const manager = PrismCLIManager.getInstance();
@@ -280,6 +296,11 @@ function registerIntegrationTools(server: McpServer) {
         .describe(
           "Automatically end the code-native test session when the flow completes (default true)",
         ),
+    },
+    {
+      readOnlyHint: false,
+      destructiveHint: true,
+      openWorldHint: true,
     },
     async ({
       flowName,
@@ -341,6 +362,11 @@ function registerIntegrationTools(server: McpServer) {
         .string()
         .optional()
         .describe("Path to the PNG icon for the integration. Not applicable for CNI."),
+    },
+    {
+      readOnlyHint: false,
+      destructiveHint: true,
+      openWorldHint: true,
     },
     async ({ directory, integrationId, path, replace, iconPath }) => {
       try {
@@ -637,6 +663,11 @@ function registerIntegrationTools(server: McpServer) {
         .describe("Seconds to listen before giving up (default 300)")
         .optional(),
     },
+    {
+      readOnlyHint: false,
+      destructiveHint: false,
+      openWorldHint: true,
+    },
     async ({ flowName, integrationId, outputDir, timeout = DEFAULT_TIMEOUT }) => {
       try {
         const manager = PrismCLIManager.getInstance();
@@ -713,6 +744,11 @@ function registerComponentTools(server: McpServer) {
         .boolean()
         .optional()
         .describe("Skip publishing when the signature matches the currently published version"),
+    },
+    {
+      readOnlyHint: false,
+      destructiveHint: true,
+      openWorldHint: true,
     },
     async ({
       directory,
